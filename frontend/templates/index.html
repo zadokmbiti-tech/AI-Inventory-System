@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartStock AI</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ── Auth Screen ─────────────────────────────────────────────────────── -->
+<div id="auth-screen" class="auth-screen">
+  <div class="auth-box">
+    <div class="brand">
+      <span class="brand-icon">▦</span>
+      <h1>SmartStock <span class="accent">AI</span></h1>
+    </div>
+    <p class="brand-sub">Inventory intelligence for growing retailers</p>
+
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <!-- Login -->
+    <div id="login-form">
+      <input type="email" id="login-email" placeholder="Email" />
+      <input type="password" id="login-password" placeholder="Password" />
+      <button class="btn-primary" onclick="login()">Sign In</button>
+      <p class="auth-link"><a href="#" onclick="showForgotForm(); return false;">Forgot password?</a></p>
+    </div>
+
+    <!-- Register -->
+    <div id="register-form" style="display:none">
+      <input type="text" id="reg-name" placeholder="Your Name" />
+      <input type="text" id="reg-business" placeholder="Business Name" />
+      <input type="email" id="reg-email" placeholder="Email" />
+      <input type="password" id="reg-password" placeholder="Password" />
+      <button class="btn-primary" onclick="register()">Create Account</button>
+    </div>
+
+    <!-- Forgot password: request link -->
+    <div id="forgot-form" style="display:none">
+      <p class="brand-sub">Enter your email and we'll send you a reset link.</p>
+      <input type="email" id="forgot-email" placeholder="Email" />
+      <button class="btn-primary" onclick="requestPasswordReset()">Send Reset Link</button>
+      <p class="auth-link"><a href="#" onclick="showLoginForm(); return false;">Back to sign in</a></p>
+    </div>
+
+    <!-- Reset password: set new password (opened via emailed link) -->
+    <div id="reset-form" style="display:none">
+      <p class="brand-sub">Choose a new password.</p>
+      <input type="password" id="reset-password" placeholder="New password" />
+      <input type="password" id="reset-password-confirm" placeholder="Confirm new password" />
+      <button class="btn-primary" onclick="submitPasswordReset()">Reset Password</button>
+      <p class="auth-link"><a href="#" onclick="showLoginForm(); return false;">Back to sign in</a></p>
+    </div>
+
+    <div id="auth-error" class="error-msg" style="display:none"></div>
+    <div id="auth-success" class="success-msg" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ── App Shell ───────────────────────────────────────────────────────── -->
+<div id="app" style="display:none">
+
+  <div id="license-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:1000; background:#2e0a12; color:#f5365c; padding:.6rem 1.25rem; font-size:.85rem; text-align:center">
+    Your license has expired. <a href="#" style="color:#f5365c; text-decoration:underline" onclick="showPage('subscription'); return false;">Renew now</a> to keep using SmartStock AI.
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">▦</span>
+      <span>SmartStock <b>AI</b></span>
+    </div>
+    <nav>
+      <a class="nav-link active" onclick="showPage('dashboard')" data-page="dashboard">
+        <span class="nav-icon">◈</span> Dashboard
+      </a>
+      <a class="nav-link" onclick="showPage('products')" data-page="products">
+        <span class="nav-icon">⊞</span> Products
+      </a>
+      <a class="nav-link" onclick="showPage('sales')" data-page="sales">
+        <span class="nav-icon">◎</span> Record Sale
+      </a>
+      <a class="nav-link" onclick="showPage('stock')" data-page="stock">
+        <span class="nav-icon">⊕</span> Stock In
+      </a>
+      <a class="nav-link" onclick="showPage('documents')" data-page="documents">
+        <span class="nav-icon">▤</span> Records
+      </a>
+      <a class="nav-link" onclick="showPage('alerts')" data-page="alerts">
+        <span class="nav-icon">⚠</span> Alerts
+        <span id="alert-badge" class="badge" style="display:none">0</span>
+      </a>
+      <a class="nav-link" onclick="showPage('forecast')" data-page="forecast">
+        <span class="nav-icon">◉</span> Forecast
+      </a>
+      <a class="nav-link" onclick="showPage('subscription')" data-page="subscription">
+        <span class="nav-icon">🔑</span> Subscription
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <span id="sidebar-user"></span>
+      <button onclick="logout()" class="btn-ghost">Sign out</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main-content">
+
+    <!-- ── Dashboard ──────────────────────────────────────────────── -->
+    <section id="page-dashboard" class="page active">
+      <div class="page-header">
+        <h2>Dashboard</h2>
+        <select id="analytics-period" onchange="loadAnalytics()" class="period-select">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Revenue</div>
+          <div class="kpi-value" id="kpi-revenue">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">VAT Collected</div>
+          <div class="kpi-value" id="kpi-vat">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Gross Profit</div>
+          <div class="kpi-value" id="kpi-profit">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Margin</div>
+          <div class="kpi-value" id="kpi-margin">—</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Sales</div>
+          <div class="kpi-value" id="kpi-sales">—</div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card wide">
+          <h3>Revenue by Day</h3>
+          <canvas id="revenue-chart" height="80"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>Top Products</h3>
+          <div id="top-products-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Products ───────────────────────────────────────────────── -->
+    <section id="page-products" class="page">
+      <div class="page-header">
+        <h2>Products</h2>
+        <button class="btn-primary" onclick="openModal('product-modal')">+ Add Product</button>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="product-search" placeholder="Search products…" oninput="filterProducts()" />
+        <label><input type="checkbox" id="low-stock-filter" onchange="loadProducts()"> Low stock only</label>
+      </div>
+      <div id="products-table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>Product</th><th>SKU</th><th>Stock</th><th>Reorder At</th>
+            <th>Cost</th><th>Price</th><th>Tax</th><th>Status</th><th></th>
+          </tr></thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Record Sale ─────────────────────────────────────────────── -->
+    <section id="page-sales" class="page">
+      <div class="page-header"><h2>Record Sale</h2></div>
+      <div class="sale-builder">
+        <div class="sale-add-row">
+          <select id="sale-product-select"><option value="">Select product…</option></select>
+          <input type="number" id="sale-qty" placeholder="Qty" min="0.1" step="0.1" value="1" />
+          <input type="number" id="sale-price" placeholder="Unit price" step="0.01" />
+          <button class="btn-secondary" onclick="addSaleItem()">Add</button>
+        </div>
+        <table class="data-table" id="sale-items-table">
+          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody id="sale-items-tbody"></tbody>
+        </table>
+        <div class="sale-total-row">
+          <span>Subtotal: <strong id="sale-subtotal">KES 0.00</strong> &nbsp;·&nbsp; VAT: <strong id="sale-vat">KES 0.00</strong> &nbsp;·&nbsp; Total: <strong id="sale-total">KES 0.00</strong></span>
+          <select id="payment-method">
+            <option value="cash">Cash</option>
+            <option value="mpesa">M-Pesa</option>
+            <option value="credit">Credit</option>
+          </select>
+          <button class="btn-primary" onclick="submitSale()">Record Sale</button>
+        </div>
+        <div id="sale-success" class="success-msg" style="display:none"></div>
+        <div id="sale-receipt" class="form-card" style="display:none; margin-top:1rem"></div>
+      </div>
+    </section>
+
+    <!-- ── Stock In ────────────────────────────────────────────────── -->
+    <section id="page-stock" class="page">
+      <div class="page-header"><h2>Stock In / Adjustment</h2></div>
+      <div class="form-card">
+        <div class="form-group">
+          <label>Product</label>
+          <select id="stock-product-select"><option value="">Select product…</option></select>
+        </div>
+        <div class="form-group">
+          <label>Movement Type</label>
+          <select id="stock-movement-type">
+            <option value="IN">Stock Received (IN)</option>
+            <option value="ADJUSTMENT">Adjustment</option>
+            <option value="LOSS">Loss / Spoilage</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Quantity</label>
+          <input type="number" id="stock-qty" placeholder="0" min="0.1" step="0.1" />
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <input type="text" id="stock-notes" placeholder="e.g. Supplier delivery #123" />
+        </div>
+        <button class="btn-primary" onclick="recordStockMovement()">Record Movement</button>
+        <div id="stock-success" class="success-msg" style="display:none"></div>
+      </div>
+    </section>
+
+    <!-- ── Documents (Receipts / Invoices / Delivery Notes) ─────────── -->
+    <section id="page-documents" class="page">
+      <div class="page-header">
+        <h2>Receipts, Invoices &amp; Delivery Notes</h2>
+        <select id="doc-type-filter" onchange="loadDocuments()" class="period-select">
+          <option value="">All types</option>
+          <option value="RECEIPT">Receipts</option>
+          <option value="INVOICE">Invoices</option>
+          <option value="DELIVERY_NOTE">Delivery Notes</option>
+        </select>
+      </div>
+
+      <div class="form-card">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Document Type *</label>
+            <select id="doc-type">
+              <option value="RECEIPT">Receipt</option>
+              <option value="INVOICE">Invoice</option>
+              <option value="DELIVERY_NOTE">Delivery Note</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Reference / Number</label>
+            <input type="text" id="doc-ref" placeholder="e.g. INV-0234" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Supplier / Customer</label>
+            <input type="text" id="doc-party" placeholder="Name" />
+          </div>
+          <div class="form-group">
+            <label>Amount (KES)</label>
+            <input type="number" id="doc-amount" step="0.01" placeholder="0.00" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="doc-date" />
+          </div>
+          <div class="form-group">
+            <label>Attach File (PDF or image, max 10MB)</label>
+            <input type="file" id="doc-file" accept=".pdf,image/*" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <input type="text" id="doc-notes" placeholder="Optional notes" />
+        </div>
+        <button class="btn-primary" onclick="submitDocument()">Save Record</button>
+        <div id="doc-success" class="success-msg" style="display:none"></div>
+      </div>
+
+      <div id="documents-table-wrap" style="margin-top:1.5rem">
+        <table class="data-table">
+          <thead><tr>
+            <th>Type</th><th>Reference</th><th>Party</th><th>Amount</th><th>Date</th><th>File</th><th></th>
+          </tr></thead>
+          <tbody id="documents-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Alerts ─────────────────────────────────────────────────── -->
+    <section id="page-alerts" class="page">
+      <div class="page-header"><h2>Low Stock Alerts</h2></div>
+      <div id="alerts-list"></div>
+    </section>
+
+    <!-- ── Forecast ───────────────────────────────────────────────── -->
+    <section id="page-forecast" class="page">
+      <div class="page-header"><h2>Demand Forecast</h2></div>
+      <div class="forecast-controls">
+        <select id="forecast-product-select"><option value="">Select product…</option></select>
+        <select id="forecast-days">
+          <option value="14">14 days</option>
+          <option value="30" selected>30 days</option>
+          <option value="60">60 days</option>
+        </select>
+        <button class="btn-primary" onclick="loadForecast()">Run Forecast</button>
+      </div>
+      <div id="forecast-result" style="display:none">
+        <div class="kpi-grid" id="forecast-kpis"></div>
+        <div class="chart-card wide" style="margin-top:1rem">
+          <canvas id="forecast-chart" height="80"></canvas>
+        </div>
+        <div id="forecast-apply-row" style="display:none; margin-top:1rem">
+          <button class="btn-secondary" onclick="applyReorderSuggestion()">
+            ✦ Apply AI Reorder Suggestion
+          </button>
+          <span id="forecast-apply-msg" style="margin-left:1rem; color:var(--green)"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Subscription / License ─────────────────────────────────── -->
+    <section id="page-subscription" class="page">
+      <div class="page-header"><h2>Subscription</h2></div>
+      <div class="form-card" style="max-width:480px">
+        <div id="license-status-box">
+          <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+        <button class="btn-primary" style="margin-top:1rem" onclick="renewLicense()">Renew for 30 Days</button>
+        <p style="color:var(--text-muted);font-size:.8rem;margin-top:.75rem">
+          Renewal is a placeholder until M-Pesa STK Push is wired in — clicking this
+          simulates a successful payment and issues a new 30-day key. In production
+          this should be triggered by the M-Pesa payment callback, not this button.
+        </p>
+        <div id="license-success" class="success-msg" style="display:none"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Product Modal ──────────────────────────────────────────────────── -->
+<div id="product-modal" class="modal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="product-modal-title">Add Product</h3>
+      <button onclick="closeModal('product-modal')" class="btn-ghost">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-product-id" />
+      <div class="form-row">
+        <div class="form-group"><label>Name *</label><input type="text" id="p-name" /></div>
+        <div class="form-group"><label>SKU</label><input type="text" id="p-sku" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Cost Price (KES) *</label><input type="number" id="p-cost" step="0.01" /></div>
+        <div class="form-group"><label>Selling Price (KES) *</label><input type="number" id="p-price" step="0.01" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Opening Stock</label><input type="number" id="p-stock" value="0" step="0.1" /></div>
+        <div class="form-group"><label>Unit</label>
+          <select id="p-unit">
+            <option>pcs</option><option>kg</option><option>litres</option>
+            <option>boxes</option><option>bags</option><option>metres</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Reorder Point</label><input type="number" id="p-reorder-point" value="0" step="0.1" /></div>
+        <div class="form-group"><label>Reorder Quantity</label><input type="number" id="p-reorder-qty" value="0" step="0.1" /></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tax Category (Kenya VAT)</label>
+          <select id="p-tax-category" onchange="onTaxCategoryChange()">
+            <option value="STANDARD">Standard — 16%</option>
+            <option value="REDUCED">Reduced (custom rate)</option>
+            <option value="ZERO_RATED">Zero-rated — 0% (exports, basic food, medical)</option>
+            <option value="EXEMPT">Exempt — no VAT</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Tax Rate (%)</label>
+          <input type="number" id="p-tax-rate" value="16" step="0.1" min="0" />
+        </div>
+      </div>
+      <div class="form-group"><label>Description</label><input type="text" id="p-desc" /></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal('product-modal')">Cancel</button>
+      <button class="btn-primary" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+.DS_Store
+*.db
+*.sqlite3
+models/*.pkl
+models/*.joblib
+uploads/
