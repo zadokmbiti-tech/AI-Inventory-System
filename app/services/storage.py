@@ -10,7 +10,7 @@ back to local disk for local development where that token isn't set.
 Documents can contain sensitive business data, so files are uploaded to a
 PUBLIC blob store but with a long random pathname (nobody can guess the
 URL), and reads always go through our own authenticated /file endpoint,
-which fetches the bytes server-side and streams them back  the blob URL
+which fetches the bytes server-side and streams them back — the blob URL
 itself is never exposed to the browser, so ownership is still enforced
 on every read exactly like before.
 """
@@ -35,7 +35,7 @@ def _use_blob() -> bool:
 def save_file(contents: bytes, original_filename: str, user_id: int) -> str:
     """
     Save uploaded file contents. Returns a string that should be stored in
-    DocumentRecord.file_path  a Vercel Blob URL in production, or a local
+    DocumentRecord.file_path — a Vercel Blob URL in production, or a local
     path in development. Content-type for the blob is inferred from the
     file extension by the vercel_blob library, so the pathname keeps the
     original extension.
@@ -61,7 +61,7 @@ def save_file(contents: bytes, original_filename: str, user_id: int) -> str:
 
 def read_file(file_path: str) -> Optional[bytes]:
     """
-    Fetch file bytes for a stored file_path  works whether it's a Blob
+    Fetch file bytes for a stored file_path — works whether it's a Blob
     URL or a local path, so callers don't need to care which backend
     is active.
     """
@@ -85,7 +85,7 @@ def delete_file(file_path: str) -> None:
             try:
                 vercel_blob.delete([file_path])
             except Exception:
-                pass  # best-effort  don't block deleting the DB record over a storage hiccup
+                pass  # best-effort — don't block deleting the DB record over a storage hiccup
         return
 
     try:

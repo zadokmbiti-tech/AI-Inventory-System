@@ -150,23 +150,23 @@
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">Revenue</div>
-          <div class="kpi-value" id="kpi-revenue"></div>
+          <div class="kpi-value" id="kpi-revenue">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">VAT Collected</div>
-          <div class="kpi-value" id="kpi-vat"></div>
+          <div class="kpi-value" id="kpi-vat">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Gross Profit</div>
-          <div class="kpi-value" id="kpi-profit"></div>
+          <div class="kpi-value" id="kpi-profit">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Margin</div>
-          <div class="kpi-value" id="kpi-margin"></div>
+          <div class="kpi-value" id="kpi-margin">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Sales</div>
-          <div class="kpi-value" id="kpi-sales"></div>
+          <div class="kpi-value" id="kpi-sales">—</div>
         </div>
       </div>
 
@@ -391,6 +391,9 @@
         </div>
         <button class="btn-primary" style="margin-top:1rem" onclick="renewLicense()">Renew for 30 Days</button>
         <p style="color:var(--text-muted);font-size:.8rem;margin-top:.75rem">
+          Renewal is a placeholder until M-Pesa STK Push is wired in — clicking this
+          simulates a successful payment and issues a new 30-day key. In production
+          this should be triggered by the M-Pesa payment callback, not this button.
         </p>
         <div id="license-success" class="success-msg" style="display:none"></div>
       </div>
@@ -433,10 +436,10 @@
         <div class="form-group">
           <label>Tax Category (Kenya VAT)</label>
           <select id="p-tax-category" onchange="onTaxCategoryChange()">
-            <option value="STANDARD">Standard  16%</option>
+            <option value="STANDARD">Standard — 16%</option>
             <option value="REDUCED">Reduced (custom rate)</option>
-            <option value="ZERO_RATED">Zero-rated  0% (exports, basic food, medical)</option>
-            <option value="EXEMPT">Exempt  no VAT</option>
+            <option value="ZERO_RATED">Zero-rated — 0% (exports, basic food, medical)</option>
+            <option value="EXEMPT">Exempt — no VAT</option>
           </select>
         </div>
         <div class="form-group">

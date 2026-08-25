@@ -1,5 +1,8 @@
 /* ── State ──────────────────────────────────────────────────────────────── */
-let token = localStorage.getItem('ss_token') || null;
+// No JWT is kept in JS-accessible storage anymore — the server sets it as an
+// httpOnly cookie on login, which the browser attaches automatically to
+// same-origin requests. `isAuthenticated` just tracks UI state.
+let isAuthenticated = false;
 let currentUser = null;
 let allProducts = [];
 let saleItems = [];
@@ -13,8 +16,9 @@ const API = '';   // same origin
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 async function apiFetch(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(API + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  // credentials: 'include' sends the httpOnly auth cookie along with the
+  // request; no Authorization header needed (and none is readable by JS).
+  const res = await fetch(API + path, { ...opts, credentials: 'include', headers: { ...headers, ...(opts.headers || {}) } });
   if (res.status === 401) { logout(); return null; }
   const data = await res.json().catch(() => null);
   if (res.status === 402) {
@@ -134,7 +138,7 @@ async function submitPasswordReset() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Reset failed');
-    showAuthSuccess('Password updated  you can sign in now.');
+    showAuthSuccess('Password updated — you can sign in now.');
     // Clean the token out of the URL and return to the sign-in tab
     window.history.replaceState({}, document.title, window.location.pathname);
     setTimeout(showLoginForm, 1200);
@@ -150,12 +154,14 @@ async function login() {
     const form = new URLSearchParams({ username: email, password: pass });
     const res = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
       body: form.toString()
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || 'Login failed');
-    token = data.access_token;
-    localStorage.setItem('ss_token', token);
+    // The server already set the httpOnly auth cookie in this response —
+    // nothing to store client-side.
+    isAuthenticated = true;
     await initApp();
   } catch (e) {
     const el = document.getElementById('auth-error');
@@ -183,7 +189,8 @@ async function register() {
 }
 
 function logout() {
-  token = null; localStorage.removeItem('ss_token');
+  isAuthenticated = false;
+  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
 }
@@ -234,14 +241,14 @@ function filterProducts() {
 
 function renderProductsTable(products) {
   const tbody = document.getElementById('products-tbody');
-  if (!products.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem">No products yet  add your first one.</td></tr>'; return; }
+  if (!products.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem">No products yet — add your first one.</td></tr>'; return; }
   tbody.innerHTML = products.map(p => {
     const pct = p.reorder_point > 0 ? (p.current_stock / p.reorder_point) : 1;
     const statusClass = p.current_stock === 0 ? 'pill-out' : pct <= 1 ? 'pill-low' : 'pill-ok';
     const statusLabel = p.current_stock === 0 ? 'Out' : pct <= 1 ? 'Low' : 'OK';
     return `<tr>
       <td><strong>${p.name}</strong></td>
-      <td style="color:var(--text-muted)">${p.sku || ''}</td>
+      <td style="color:var(--text-muted)">${p.sku || '—'}</td>
       <td>${p.current_stock} ${p.unit}</td>
       <td>${p.reorder_point} ${p.unit}</td>
       <td>${fmt(p.cost_price)}</td>
@@ -402,7 +409,7 @@ function renderSaleItems() {
       <td>${item.product_name}</td>
       <td>${item.quantity}</td>
       <td>${fmt(item.unit_price)}</td>
-      <td>${item.vat_rate ? fmt(item.vat) + ` (${item.vat_rate}%)` : ''}</td>
+      <td>${item.vat_rate ? fmt(item.vat) + ` (${item.vat_rate}%)` : '—'}</td>
       <td>${fmt(item.subtotal)}</td>
       <td><button class="btn-ghost btn-sm" onclick="removeSaleItem(${i})">✕</button></td>
     </tr>`).join('');
@@ -421,12 +428,12 @@ function renderReceipt(sale) {
     const name = product ? product.name : `Product #${it.product_id}`;
     return `<tr>
       <td>${name}</td><td>${it.quantity}</td><td>${fmt(it.unit_price)}</td>
-      <td>${it.tax_amount ? fmt(it.tax_amount) + ` (${it.tax_rate}%)` : ''}</td>
+      <td>${it.tax_amount ? fmt(it.tax_amount) + ` (${it.tax_rate}%)` : '—'}</td>
       <td>${fmt(it.subtotal + it.tax_amount)}</td>
     </tr>`;
   }).join('');
   box.innerHTML = `
-    <h3 style="margin-bottom:.75rem">Receipt  Sale #${sale.id}</h3>
+    <h3 style="margin-bottom:.75rem">Receipt — Sale #${sale.id}</h3>
     <table class="data-table">
       <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Total</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -498,19 +505,19 @@ async function loadDocuments() {
 function renderDocumentsTable(docs) {
   const tbody = document.getElementById('documents-tbody');
   if (!docs.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">No records yet  add one above.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">No records yet — add one above.</td></tr>';
     return;
   }
   tbody.innerHTML = docs.map(d => {
     const fileCell = d.original_filename
       ? `<a href="#" onclick="viewDocument(${d.id}, ${JSON.stringify(d.original_filename)}); return false;">${d.original_filename}</a>`
-      : '<span style="color:var(--text-muted)"></span>';
+      : '<span style="color:var(--text-muted)">—</span>';
     return `<tr>
       <td><span class="pill pill-ok">${docTypeLabel(d.doc_type)}</span></td>
-      <td>${d.reference_number || ''}</td>
-      <td>${d.party_name || ''}</td>
-      <td>${d.amount != null ? fmt(d.amount) : ''}</td>
-      <td>${d.doc_date ? new Date(d.doc_date).toLocaleDateString() : ''}</td>
+      <td>${d.reference_number || '—'}</td>
+      <td>${d.party_name || '—'}</td>
+      <td>${d.amount != null ? fmt(d.amount) : '—'}</td>
+      <td>${d.doc_date ? new Date(d.doc_date).toLocaleDateString() : '—'}</td>
       <td>${fileCell}</td>
       <td><button class="btn-ghost btn-sm" onclick="deleteDocument(${d.id})">Delete</button></td>
     </tr>`;
@@ -540,7 +547,7 @@ async function submitDocument() {
   try {
     const res = await fetch('/api/documents', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include',
       body: formData
     });
     const data = await res.json().catch(() => null);
@@ -558,7 +565,7 @@ async function submitDocument() {
 
 async function viewDocument(id, filename) {
   try {
-    const res = await fetch(`/api/documents/${id}/file`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const res = await fetch(`/api/documents/${id}/file`, { credentials: 'include' });
     if (!res.ok) throw new Error('Could not open file');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -578,7 +585,7 @@ async function deleteDocument(id) {
   try {
     const res = await fetch(`/api/documents/${id}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+      credentials: 'include'
     });
     if (!res.ok && res.status !== 204) {
       const data = await res.json().catch(() => null);
@@ -690,13 +697,13 @@ const TIER_LABELS = {
 function renderProductPerformance(data) {
   const wrap = document.getElementById('performance-list');
   if (!data || !data.products || data.products.length === 0) {
-    wrap.innerHTML = '<p style="color:var(--text-muted)">Not enough sales data yet  record some sales to see performance rankings.</p>';
+    wrap.innerHTML = '<p style="color:var(--text-muted)">Not enough sales data yet — record some sales to see performance rankings.</p>';
     return;
   }
 
   wrap.innerHTML = data.products.map(p => {
     const tier = TIER_LABELS[p.tier] || { label: p.tier, color: 'var(--text-muted)' };
-    const trendArrow = p.trend_pct > 0 ? '▲' : (p.trend_pct < 0 ? '▼' : '');
+    const trendArrow = p.trend_pct > 0 ? '▲' : (p.trend_pct < 0 ? '▼' : '—');
     const trendColor = p.trend_pct > 0 ? 'var(--green)' : (p.trend_pct < 0 ? 'var(--red)' : 'var(--text-muted)');
     return `
       <div class="top-product-row" style="align-items:flex-start; flex-direction:column; gap:0.35rem; padding:0.75rem 0;">
@@ -739,7 +746,7 @@ async function loadForecast() {
   `;
 
   document.getElementById('forecast-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? ''}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? '—'}</div></div>
     <div class="kpi-card"><div class="kpi-label">Reorder When Stock Hits</div><div class="kpi-value">${data.suggested_reorder_point}</div></div>
     <div class="kpi-card"><div class="kpi-label">Order This Many At A Time</div><div class="kpi-value">${data.suggested_reorder_quantity}</div></div>
   `;
@@ -802,10 +809,10 @@ async function loadLicenseStatus() {
   const box = document.getElementById('license-status-box');
   const banner = document.getElementById('license-banner');
   try {
-    const res = await fetch('/api/license/status', { headers: { 'Authorization': `Bearer ${token}` } });
+    const res = await fetch('/api/license/status', { credentials: 'include' });
     const data = await res.json().catch(() => null);
     if (res.status === 404) {
-      box.innerHTML = `<p style="color:var(--text-muted)">No license yet  renew to get started.</p>`;
+      box.innerHTML = `<p style="color:var(--text-muted)">No license yet — renew to get started.</p>`;
       banner.style.display = 'none';
       return;
     }
@@ -834,7 +841,8 @@ async function renewLicense() {
   try {
     const res = await fetch('/api/license/renew', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan: 'monthly' }),
     });
     const data = await res.json().catch(() => null);
@@ -879,5 +887,8 @@ document.addEventListener('DOMContentLoaded', () => {
     showResetForm();
     return; // don't auto-login into the app while a reset is pending
   }
-  if (token) initApp();
+  // No client-readable token to check anymore — just try to load the
+  // session; if the httpOnly cookie is missing/expired, apiFetch's 401
+  // handling calls logout() and the login screen shows instead.
+  initApp();
 });
