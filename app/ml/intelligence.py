@@ -161,6 +161,32 @@ def _build_forecast_summary(
     }
 
 
+def _build_weekly_forecast(forecast_points: list, unit: str) -> list:
+    """
+    Groups daily (fractional) predictions into 7-day totals, rounded to
+    whole units. A retailer can act on 'about 7 bottles this week' — a
+    jagged daily line hovering around 1.0 isn't useful for anything you
+    sell as whole pieces.
+    """
+    weekly = []
+    for i in range(0, len(forecast_points), 7):
+        chunk = forecast_points[i:i + 7]
+        if not chunk:
+            continue
+        start_date = chunk[0]["date"]
+        end_date = chunk[-1]["date"]
+        predicted_sum = sum(p["predicted_demand"] for p in chunk)
+        lower_sum = sum(p["lower_bound"] for p in chunk)
+        upper_sum = sum(p["upper_bound"] for p in chunk)
+        weekly.append({
+            "label": f"{start_date} to {end_date}" if start_date != end_date else start_date,
+            "predicted_units": _round_for_unit(predicted_sum, unit),
+            "lower_units": _round_for_unit(lower_sum, unit),
+            "upper_units": _round_for_unit(upper_sum, unit),
+        })
+    return weekly
+
+
 def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int = 30) -> dict:
     """
     Demand forecasting using Prophet if enough data exists (>30 data points),
@@ -236,13 +262,16 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
     summary = _build_forecast_summary(
         product, len(rows), avg_daily_demand, suggested_reorder_point, suggested_reorder_quantity,
     )
+    weekly_forecast = _build_weekly_forecast(forecast_points, product.unit or "pcs")
 
     return {
         "product_id": product.id,
         "product_name": product.name,
+        "unit": product.unit or "pcs",
         "data_points_used": len(rows),
         "method": "prophet" if len(rows) >= 10 else "moving_average",
         "forecast": forecast_points,
+        "weekly_forecast": weekly_forecast,
         "suggested_reorder_point": max(suggested_reorder_point, 1),
         "suggested_reorder_quantity": max(suggested_reorder_quantity, 1),
         "summary": summary,

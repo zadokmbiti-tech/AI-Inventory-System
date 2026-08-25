@@ -733,56 +733,41 @@ async function loadForecast() {
     <div class="kpi-card"><div class="kpi-label">Order This Many At A Time</div><div class="kpi-value">${data.suggested_reorder_quantity}</div></div>
   `;
 
-  const labels = data.forecast.map(f => f.date);
-  const predicted = data.forecast.map(f => f.predicted_demand);
-  const upper = data.forecast.map(f => f.upper_bound);
-  const lower = data.forecast.map(f => f.lower_bound);
+  const unit = data.unit || 'pcs';
+  const weekly = data.weekly_forecast || [];
+  const labels = weekly.map(w => w.label);
+  const predicted = weekly.map(w => w.predicted_units);
+  const rangeText = weekly.map(w => `Likely between ${w.lower_units} and ${w.upper_units} ${unit}`);
 
   if (forecastChart) forecastChart.destroy();
   const ctx = document.getElementById('forecast-chart').getContext('2d');
   forecastChart = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
       labels,
       datasets: [
         {
-          label: 'Predicted Demand',
+          label: `Predicted ${unit} sold`,
           data: predicted,
-          borderColor: '#4f8ef7',
-          backgroundColor: 'rgba(79,142,247,0.1)',
-          borderWidth: 2,
-          tension: 0.4,
-          fill: false,
-        },
-        {
-          label: 'Upper Bound',
-          data: upper,
-          borderColor: 'rgba(45,206,137,0.3)',
-          backgroundColor: 'rgba(45,206,137,0.05)',
-          borderWidth: 1,
-          borderDash: [4,4],
-          tension: 0.4,
-          fill: '+1',
-          pointRadius: 0,
-        },
-        {
-          label: 'Lower Bound',
-          data: lower,
-          borderColor: 'rgba(45,206,137,0.3)',
-          backgroundColor: 'rgba(45,206,137,0.05)',
-          borderWidth: 1,
-          borderDash: [4,4],
-          tension: 0.4,
-          pointRadius: 0,
+          backgroundColor: '#4f8ef7',
+          borderRadius: 4,
+          maxBarThickness: 48,
         },
       ]
     },
     options: {
       responsive: true,
-      plugins: { legend: { labels: { color: '#6b7494' } } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            afterLabel: (item) => rangeText[item.dataIndex] || '',
+          }
+        }
+      },
       scales: {
-        x: { ticks: { color: '#6b7494', maxTicksLimit: 10 }, grid: { color: '#2a2f42' } },
-        y: { ticks: { color: '#6b7494' }, grid: { color: '#2a2f42' } },
+        x: { ticks: { color: '#6b7494' }, grid: { display: false } },
+        y: { ticks: { color: '#6b7494', precision: 0 }, grid: { color: '#2a2f42' }, beginAtZero: true },
       }
     }
   });
