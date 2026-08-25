@@ -9,7 +9,7 @@ RESEND_API_URL = "https://api.resend.com/emails"
 
 def _send_email(to_email: str, subject: str, body: str, dev_label: str) -> None:
     if not settings.resend_api_key:
-        # Dev fallback — no Resend key configured, so just log the content.
+        # Dev fallback  no Resend key configured, so just log the content.
         print("=" * 60)
         print(f"[DEV] {dev_label} for {to_email}:")
         print(body)
@@ -50,7 +50,7 @@ def send_license_key_email(to_email: str, license_key: str, expires_at, plan: st
         f"Your license key: {license_key}\n"
         f"Valid until: {expires_at.strftime('%Y-%m-%d %H:%M UTC')}\n\n"
         "Enter this key in the app to activate/renew your subscription. "
-        "Keep it safe — you'll need a new one every 30 days when it renews.\n\n"
+        "Keep it safe  you'll need a new one every 30 days when it renews.\n\n"
         "If you didn't request this, please contact support."
     )
     _send_email(to_email, subject, body, dev_label="License key email")

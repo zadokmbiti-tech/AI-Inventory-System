@@ -134,7 +134,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
     suggested_reorder_quantity = product.reorder_quantity
 
     if len(rows) >= 10:
-        # Enough data — use Prophet
+        # Enough data  use Prophet
         try:
             from prophet import Prophet
             df = pd.DataFrame(rows, columns=["ds", "y"])
@@ -169,7 +169,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
             forecast_points = _simple_forecast(rows, days_ahead)
 
     else:
-        # Not enough data — simple moving average forecast
+        # Not enough data  simple moving average forecast
         forecast_points = _simple_forecast(rows, days_ahead)
 
     return {
@@ -214,7 +214,7 @@ def get_analytics_summary(user_id: int, db: Session, days: int = 30) -> dict:
         Sale.created_at >= since
     ).all()
 
-    # Revenue is net of VAT — VAT collected isn't business income, it's owed to KRA.
+    # Revenue is net of VAT  VAT collected isn't business income, it's owed to KRA.
     total_revenue = sum(s.subtotal_amount for s in sales)
     total_vat_collected = sum(s.tax_amount for s in sales)
     total_sales = len(sales)
