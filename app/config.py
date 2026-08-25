@@ -14,12 +14,9 @@ class Settings(BaseSettings):
     reset_token_expire_minutes: int = 30
     frontend_base_url: str = "http://localhost:8000"
 
-    # SMTP (optional — if unset, reset links are logged to console instead of emailed)
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_from: str = ""
+    # Resend (optional — if unset, reset links are logged to console instead of emailed)
+    resend_api_key: str = ""
+    email_from: str = "SmartStock AI <onboarding@resend.dev>"
 
     class Config:
         env_file = ".env"

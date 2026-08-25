@@ -1,9 +1,33 @@
-import smtplib
-from email.mime.text import MIMEText
+import httpx
 
 from app.config import get_settings
 
 settings = get_settings()
+
+RESEND_API_URL = "https://api.resend.com/emails"
+
+
+def _send_email(to_email: str, subject: str, body: str, dev_label: str) -> None:
+    if not settings.resend_api_key:
+        # Dev fallback — no Resend key configured, so just log the content.
+        print("=" * 60)
+        print(f"[DEV] {dev_label} for {to_email}:")
+        print(body)
+        print("=" * 60)
+        return
+
+    payload = {
+        "from": settings.email_from,
+        "to": [to_email],
+        "subject": subject,
+        "text": body,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.resend_api_key}",
+        "Content-Type": "application/json",
+    }
+    response = httpx.post(RESEND_API_URL, json=payload, headers=headers, timeout=10)
+    response.raise_for_status()
 
 
 def send_password_reset_email(to_email: str, reset_link: str) -> None:
@@ -15,25 +39,7 @@ def send_password_reset_email(to_email: str, reset_link: str) -> None:
         f"{reset_link}\n\n"
         "If you didn't request this, you can safely ignore this email."
     )
-
-    if not settings.smtp_host:
-        # Dev fallback — no SMTP configured, so just log the link.
-        print("=" * 60)
-        print(f"[DEV] Password reset link for {to_email}:")
-        print(reset_link)
-        print("=" * 60)
-        return
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = settings.smtp_from or settings.smtp_user
-    msg["To"] = to_email
-
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-        server.starttls()
-        if settings.smtp_user:
-            server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(msg["From"], [to_email], msg.as_string())
+    _send_email(to_email, subject, body, dev_label="Password reset link")
 
 
 def send_license_key_email(to_email: str, license_key: str, expires_at, plan: str) -> None:
@@ -47,21 +53,4 @@ def send_license_key_email(to_email: str, license_key: str, expires_at, plan: st
         "Keep it safe — you'll need a new one every 30 days when it renews.\n\n"
         "If you didn't request this, please contact support."
     )
-
-    if not settings.smtp_host:
-        print("=" * 60)
-        print(f"[DEV] License key email for {to_email}:")
-        print(body)
-        print("=" * 60)
-        return
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = settings.smtp_from or settings.smtp_user
-    msg["To"] = to_email
-
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as server:
-        server.starttls()
-        if settings.smtp_user:
-            server.login(settings.smtp_user, settings.smtp_password)
-        server.sendmail(msg["From"], [to_email], msg.as_string())
+    _send_email(to_email, subject, body, dev_label="License key email")
