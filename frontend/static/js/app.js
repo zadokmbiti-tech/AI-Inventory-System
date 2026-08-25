@@ -187,13 +187,20 @@ async function login() {
 }
 
 async function register() {
+  const password = document.getElementById('reg-password').value;
+  const reqs = checkPasswordRequirements();
+  if (!reqs.length || !reqs.letter || !reqs.digit) {
+    const el = document.getElementById('auth-error');
+    el.textContent = 'Please meet all password requirements.'; el.style.display = 'block';
+    return;
+  }
   try {
     await apiFetch('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         name: document.getElementById('reg-name').value,
         email: document.getElementById('reg-email').value,
-        password: document.getElementById('reg-password').value,
+        password,
         business_name: document.getElementById('reg-business').value,
       })
     });
@@ -203,6 +210,23 @@ async function register() {
     const el = document.getElementById('auth-error');
     el.textContent = e.message; el.style.display = 'block';
   }
+}
+
+/* ── Password requirements checklist ───────────────────────────────────────
+   Mirrors the backend rule in app/schemas/schemas.py
+   (_validate_password_strength): >=8 chars, at least one letter, at least
+   one digit. Keep both in sync if the rule ever changes. */
+function checkPasswordRequirements() {
+  const password = document.getElementById('reg-password').value;
+  const reqs = {
+    length: password.length >= 8,
+    letter: /[a-zA-Z]/.test(password),
+    digit: /[0-9]/.test(password),
+  };
+  document.getElementById('req-length').classList.toggle('met', reqs.length);
+  document.getElementById('req-letter').classList.toggle('met', reqs.letter);
+  document.getElementById('req-digit').classList.toggle('met', reqs.digit);
+  return reqs;
 }
 
 function logout() {

@@ -80,6 +80,28 @@ input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
 }
 .auth-box input:focus { outline: none; border-color: var(--accent); }
 
+/* ── Password requirements checklist ────────────────────────────────────── */
+.password-requirements {
+  list-style: none; margin: -0.35rem 0 0.9rem; padding: 0;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.password-requirements li {
+  display: flex; align-items: center; gap: 0.45rem;
+  font-size: 0.78rem; color: var(--text-muted);
+  transition: color .15s;
+}
+.password-requirements .req-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 1px solid var(--border); color: transparent;
+  font-size: 0.65rem; flex-shrink: 0; transition: all .15s;
+}
+.password-requirements li.met { color: var(--green, #2dce89); }
+.password-requirements li.met .req-icon {
+  background: var(--green, #2dce89); border-color: var(--green, #2dce89);
+  color: #0b1710;
+}
+
 /* ── App Shell ────────────────────────────────────────────────────────── */
 #app { display: flex; height: 100vh; overflow: hidden; }
 

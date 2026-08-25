@@ -43,7 +43,12 @@
       <input type="text" id="reg-name" placeholder="Your Name" />
       <input type="text" id="reg-business" placeholder="Business Name" />
       <input type="email" id="reg-email" placeholder="Email" />
-      <input type="password" id="reg-password" placeholder="Password" />
+      <input type="password" id="reg-password" placeholder="Password" oninput="checkPasswordRequirements()" />
+      <ul id="password-requirements" class="password-requirements">
+        <li id="req-length"><span class="req-icon">○</span> At least 8 characters</li>
+        <li id="req-letter"><span class="req-icon">○</span> At least one letter</li>
+        <li id="req-digit"><span class="req-icon">○</span> At least one number</li>
+      </ul>
       <button class="btn-primary" onclick="register()">Create Account</button>
     </div>
 
