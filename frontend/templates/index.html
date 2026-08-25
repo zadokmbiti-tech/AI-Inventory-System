@@ -126,9 +126,12 @@
       <div class="page-header">
         <h2>Dashboard</h2>
         <select id="analytics-period" onchange="loadAnalytics()" class="period-select">
-          <option value="7">Last 7 days</option>
-          <option value="30" selected>Last 30 days</option>
-          <option value="90">Last 90 days</option>
+          <option value="1">1 day</option>
+          <option value="7">1 week</option>
+          <option value="30" selected>30 days</option>
+          <option value="90">90 days</option>
+          <option value="182">6 months</option>
+          <option value="365">1 year</option>
         </select>
       </div>
 
@@ -347,9 +350,14 @@
         <button class="btn-primary" onclick="loadForecast()">Run Forecast</button>
       </div>
       <div id="forecast-result" style="display:none">
-        <div class="kpi-grid" id="forecast-kpis"></div>
+        <div id="forecast-summary-box" class="chart-card" style="margin-bottom:1rem; border-left:3px solid var(--accent)"></div>
+        <div class="kpi-grid" id="forecast-kpis" style="grid-template-columns: repeat(3, 1fr)"></div>
         <div class="chart-card wide" style="margin-top:1rem">
+          <h3>Predicted Daily Sales — Detailed Chart</h3>
           <canvas id="forecast-chart" height="80"></canvas>
+          <p style="color:var(--text-muted); font-size:0.78rem; margin-top:0.5rem">
+            The shaded band shows the range this could realistically fall in — not just one exact number.
+          </p>
         </div>
         <div id="forecast-apply-row" style="display:none; margin-top:1rem">
           <button class="btn-secondary" onclick="applyReorderSuggestion()">

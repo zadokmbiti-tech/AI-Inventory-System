@@ -713,11 +713,24 @@ async function loadForecast() {
   if (!data) return;
 
   document.getElementById('forecast-result').style.display = 'block';
+
+  const s = data.summary || {};
+  const confColor = { high: 'var(--green)', medium: 'var(--yellow)', low: 'var(--orange)' }[s.confidence] || 'var(--text-muted)';
+  const confLabel = { high: 'Reliable', medium: 'Rough guide', low: 'Early estimate' }[s.confidence] || '';
+
+  document.getElementById('forecast-summary-box').innerHTML = `
+    <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.5rem">
+      <span class="pill" style="background:transparent; border:1px solid ${confColor}; color:${confColor}">${confLabel}</span>
+    </div>
+    <p style="font-size:1.05rem; font-weight:600; margin-bottom:0.4rem">${s.headline || ''}</p>
+    <p style="color:var(--text); margin-bottom:0.5rem">${s.action || ''}</p>
+    <p style="color:var(--text-muted); font-size:0.82rem">${s.confidence_note || ''}</p>
+  `;
+
   document.getElementById('forecast-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Method</div><div class="kpi-value" style="font-size:1rem;text-transform:capitalize">${data.method.replace('_',' ')}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Data Points</div><div class="kpi-value">${data.data_points_used}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Suggested Reorder Point</div><div class="kpi-value">${data.suggested_reorder_point}</div></div>
-    <div class="kpi-card"><div class="kpi-label">Suggested Reorder Qty</div><div class="kpi-value">${data.suggested_reorder_quantity}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? '—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Reorder When Stock Hits</div><div class="kpi-value">${data.suggested_reorder_point}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Order This Many At A Time</div><div class="kpi-value">${data.suggested_reorder_quantity}</div></div>
   `;
 
   const labels = data.forecast.map(f => f.date);

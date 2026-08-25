@@ -103,6 +103,64 @@ def get_reorder_suggestions(product_id: int, user_id: int, db: Session) -> dict:
     }
 
 
+def _round_for_unit(value: float, unit: str) -> float:
+    """Whole units for countable stock (pcs, boxes, bags); one decimal for
+    things sold by weight/volume (kg, litres, metres) since '0.5 kg' makes
+    sense to a shopkeeper but '0.5 pcs' does not."""
+    if unit in ("kg", "litres", "metres"):
+        return round(value, 1)
+    return round(value)
+
+
+def _build_forecast_summary(
+    product, data_points_used: int, avg_daily_demand: float,
+    suggested_reorder_point: float, suggested_reorder_quantity: float,
+) -> dict:
+    """
+    Plain-language version of the forecast, written for a shop owner rather
+    than a data analyst — no 'method', 'data points', or decimal demand
+    numbers, just what's likely to sell and what to do about it.
+    """
+    unit = product.unit or "pcs"
+    daily = _round_for_unit(avg_daily_demand, unit)
+    reorder_point = _round_for_unit(suggested_reorder_point, unit)
+    reorder_qty = _round_for_unit(suggested_reorder_quantity, unit)
+
+    if data_points_used == 0:
+        confidence = "low"
+        confidence_note = (
+            f"You haven't recorded any sales for {product.name} yet, so this is a starting "
+            "estimate, not a real prediction. It will get accurate once you log a few sales."
+        )
+    elif data_points_used < 10:
+        confidence = "medium"
+        confidence_note = (
+            f"Based on only {data_points_used} day(s) of sales so far, so treat this as a rough "
+            "guide — it'll sharpen up the more sales you record."
+        )
+    else:
+        confidence = "high"
+        confidence_note = f"Based on {data_points_used} days of actual sales history."
+
+    if daily > 0:
+        headline = f"You're likely to sell about {daily} {unit} of {product.name} per day."
+    else:
+        headline = f"Not enough recent sales to predict daily demand for {product.name} yet."
+
+    action = (
+        f"Reorder when stock drops to {reorder_point} {unit}, and order {reorder_qty} {unit} "
+        "at a time to avoid running out."
+    )
+
+    return {
+        "confidence": confidence,
+        "confidence_note": confidence_note,
+        "headline": headline,
+        "action": action,
+        "avg_daily_demand": daily,
+    }
+
+
 def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int = 30) -> dict:
     """
     Demand forecasting using Prophet if enough data exists (>30 data points),
@@ -132,6 +190,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
     forecast_points = []
     suggested_reorder_point = product.reorder_point
     suggested_reorder_quantity = product.reorder_quantity
+    avg_daily_demand = 0.0
 
     if len(rows) >= 10:
         # Enough data — use Prophet
@@ -161,16 +220,22 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
                     "upper_bound": max(0, round(row["yhat_upper"], 2)),
                 })
 
-            avg_daily = future_only["yhat"].clip(lower=0).mean()
-            suggested_reorder_point = round(avg_daily * 3 * 1.5, 1)
-            suggested_reorder_quantity = round(avg_daily * 14, 1)
+            avg_daily_demand = float(future_only["yhat"].clip(lower=0).mean())
+            suggested_reorder_point = round(avg_daily_demand * 3 * 1.5, 1)
+            suggested_reorder_quantity = round(avg_daily_demand * 14, 1)
 
         except Exception as e:
             forecast_points = _simple_forecast(rows, days_ahead)
+            avg_daily_demand = np.mean([p["predicted_demand"] for p in forecast_points]) if forecast_points else 0.0
 
     else:
         # Not enough data — simple moving average forecast
         forecast_points = _simple_forecast(rows, days_ahead)
+        avg_daily_demand = np.mean([p["predicted_demand"] for p in forecast_points]) if forecast_points else 0.0
+
+    summary = _build_forecast_summary(
+        product, len(rows), avg_daily_demand, suggested_reorder_point, suggested_reorder_quantity,
+    )
 
     return {
         "product_id": product.id,
@@ -180,7 +245,9 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
         "forecast": forecast_points,
         "suggested_reorder_point": max(suggested_reorder_point, 1),
         "suggested_reorder_quantity": max(suggested_reorder_quantity, 1),
+        "summary": summary,
     }
+
 
 
 def _simple_forecast(rows: list, days_ahead: int) -> list:
