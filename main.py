@@ -39,7 +39,7 @@ templates = Jinja2Templates(directory="frontend/templates")
 
 # Routers
 app.include_router(auth.router)
-app.include_router(license_router.router)  # not license-gated  you must be able to check/renew even when expired
+app.include_router(license_router.router)  # not license-gated — you must be able to check/renew even when expired
 app.include_router(products.router, dependencies=[Depends(require_active_license)])
 app.include_router(stock_sales.router, dependencies=[Depends(require_active_license)])
 app.include_router(ai_insights.router, dependencies=[Depends(require_active_license)])

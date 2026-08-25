@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SmartStock AI</title>
   <link rel="stylesheet" href="/static/css/style.css" />
+  <script>
+    // Apply saved theme before first paint to avoid a flash of the wrong theme.
+    (function () {
+      var saved = localStorage.getItem('theme');
+      if (saved === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    })();
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 </head>
 <body>
@@ -103,6 +110,9 @@
       </a>
     </nav>
     <div class="sidebar-footer">
+      <button onclick="toggleTheme()" class="theme-toggle">
+        <span id="theme-icon">🌙</span> <span id="theme-label">Dark mode</span>
+      </button>
       <span id="sidebar-user"></span>
       <button onclick="logout()" class="btn-ghost">Sign out</button>
     </div>
@@ -125,23 +135,23 @@
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">Revenue</div>
-          <div class="kpi-value" id="kpi-revenue"></div>
+          <div class="kpi-value" id="kpi-revenue">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">VAT Collected</div>
-          <div class="kpi-value" id="kpi-vat"></div>
+          <div class="kpi-value" id="kpi-vat">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Gross Profit</div>
-          <div class="kpi-value" id="kpi-profit"></div>
+          <div class="kpi-value" id="kpi-profit">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Margin</div>
-          <div class="kpi-value" id="kpi-margin"></div>
+          <div class="kpi-value" id="kpi-margin">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Sales</div>
-          <div class="kpi-value" id="kpi-sales"></div>
+          <div class="kpi-value" id="kpi-sales">—</div>
         </div>
       </div>
 
@@ -309,6 +319,24 @@
     <!-- ── Forecast ───────────────────────────────────────────────── -->
     <section id="page-forecast" class="page">
       <div class="page-header"><h2>Demand Forecast</h2></div>
+
+      <div class="chart-card" style="margin-bottom:1.5rem">
+        <div class="page-header" style="margin-bottom:0.75rem">
+          <h3 style="font-size:0.85rem; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted)">Product Performance</h3>
+          <select id="performance-period" onchange="loadProductPerformance()" class="period-select">
+            <option value="1">1 day</option>
+            <option value="7">1 week</option>
+            <option value="30" selected>30 days</option>
+            <option value="90">90 days</option>
+            <option value="182">6 months</option>
+            <option value="365">1 year</option>
+          </select>
+        </div>
+        <div id="performance-list">
+          <p style="color:var(--text-muted)">Loading…</p>
+        </div>
+      </div>
+
       <div class="forecast-controls">
         <select id="forecast-product-select"><option value="">Select product…</option></select>
         <select id="forecast-days">
@@ -341,7 +369,7 @@
         </div>
         <button class="btn-primary" style="margin-top:1rem" onclick="renewLicense()">Renew for 30 Days</button>
         <p style="color:var(--text-muted);font-size:.8rem;margin-top:.75rem">
-          Renewal is a placeholder until M-Pesa STK Push is wired in  clicking this
+          Renewal is a placeholder until M-Pesa STK Push is wired in — clicking this
           simulates a successful payment and issues a new 30-day key. In production
           this should be triggered by the M-Pesa payment callback, not this button.
         </p>
@@ -386,10 +414,10 @@
         <div class="form-group">
           <label>Tax Category (Kenya VAT)</label>
           <select id="p-tax-category" onchange="onTaxCategoryChange()">
-            <option value="STANDARD">Standard  16%</option>
+            <option value="STANDARD">Standard — 16%</option>
             <option value="REDUCED">Reduced (custom rate)</option>
-            <option value="ZERO_RATED">Zero-rated  0% (exports, basic food, medical)</option>
-            <option value="EXEMPT">Exempt  no VAT</option>
+            <option value="ZERO_RATED">Zero-rated — 0% (exports, basic food, medical)</option>
+            <option value="EXEMPT">Exempt — no VAT</option>
           </select>
         </div>
         <div class="form-group">

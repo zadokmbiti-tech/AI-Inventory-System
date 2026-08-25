@@ -8,6 +8,7 @@ from app.ml.intelligence import (
     get_reorder_suggestions,
     forecast_demand,
     get_analytics_summary,
+    get_product_performance_insights,
 )
 
 router = APIRouter(prefix="/api/ai", tags=["AI Insights"])
@@ -54,6 +55,19 @@ def demand_forecast(
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
     return result
+
+
+@router.get("/product-performance")
+def product_performance(
+    days: int = Query(default=30, ge=1, le=366),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Ranks all products by sales performance (units, revenue, trend) and
+    returns best sellers, slow movers, and a suggestion for each.
+    """
+    return get_product_performance_insights(user.id, db, days)
 
 
 @router.get("/analytics")

@@ -134,7 +134,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
     suggested_reorder_quantity = product.reorder_quantity
 
     if len(rows) >= 10:
-        # Enough data  use Prophet
+        # Enough data — use Prophet
         try:
             from prophet import Prophet
             df = pd.DataFrame(rows, columns=["ds", "y"])
@@ -169,7 +169,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
             forecast_points = _simple_forecast(rows, days_ahead)
 
     else:
-        # Not enough data  simple moving average forecast
+        # Not enough data — simple moving average forecast
         forecast_points = _simple_forecast(rows, days_ahead)
 
     return {
@@ -205,6 +205,118 @@ def _simple_forecast(rows: list, days_ahead: int) -> list:
     return points
 
 
+def get_product_performance_insights(user_id: int, db: Session, days: int = 30) -> dict:
+    """
+    Ranks every active product by how well it's selling relative to the
+    others, and attaches a plain-language suggestion for each — e.g. a
+    best seller worth stocking more of, a slow mover worth discounting or
+    dropping, or a product trending up/down versus the first half of the
+    period.
+    """
+    since = datetime.utcnow() - timedelta(days=days)
+    midpoint = datetime.utcnow() - timedelta(days=days / 2)
+
+    products = db.query(Product).filter(
+        Product.user_id == user_id,
+        Product.is_active == True,
+    ).all()
+
+    rows = []
+    for p in products:
+        sale_items = (
+            db.query(SaleItem)
+            .join(Sale)
+            .filter(SaleItem.product_id == p.id, Sale.created_at >= since)
+            .all()
+        )
+
+        units_sold = sum(item.quantity for item in sale_items)
+        revenue = sum(item.subtotal for item in sale_items)
+        profit = sum(item.subtotal - (p.cost_price * item.quantity) for item in sale_items)
+
+        first_half_units = sum(
+            item.quantity for item in sale_items if item.sale.created_at < midpoint
+        )
+        second_half_units = units_sold - first_half_units
+
+        if first_half_units > 0:
+            trend_pct = round(((second_half_units - first_half_units) / first_half_units) * 100, 1)
+        elif second_half_units > 0:
+            trend_pct = 100.0  # went from nothing to something
+        else:
+            trend_pct = 0.0
+
+        rows.append({
+            "product_id": p.id,
+            "product_name": p.name,
+            "sku": p.sku,
+            "units_sold": units_sold,
+            "revenue": round(revenue, 2),
+            "profit": round(profit, 2),
+            "daily_velocity": round(units_sold / days, 2),
+            "trend_pct": trend_pct,
+            "current_stock": p.current_stock,
+        })
+
+    if not rows:
+        return {"period_days": days, "products": [], "message": "No active products to analyze."}
+
+    total_units = sum(r["units_sold"] for r in rows) or 1
+    for r in rows:
+        r["share_of_units_pct"] = round((r["units_sold"] / total_units) * 100, 1)
+
+    rows.sort(key=lambda r: r["units_sold"], reverse=True)
+
+    n = len(rows)
+    for i, r in enumerate(rows):
+        r["rank"] = i + 1
+        if r["units_sold"] == 0:
+            r["tier"] = "no_sales"
+            r["suggestion"] = (
+                f"No sales recorded in the last {days} days. Consider a discount, bundling it "
+                "with a best seller, or discontinuing it if this continues."
+            )
+        elif i < max(1, round(n * 0.2)):
+            r["tier"] = "best_seller"
+            if r["trend_pct"] > 15:
+                r["suggestion"] = (
+                    f"Top performer and still climbing (+{r['trend_pct']}% vs the first half of "
+                    "the period). Increase reorder quantity to avoid stockouts."
+                )
+            else:
+                r["suggestion"] = (
+                    "One of your best sellers. Make sure reorder point and quantity are high "
+                    "enough that this never runs out."
+                )
+        elif i >= n - max(1, round(n * 0.2)):
+            r["tier"] = "slow_mover"
+            if r["trend_pct"] < -15:
+                r["suggestion"] = (
+                    f"Sales are slowing further ({r['trend_pct']}% vs the first half of the "
+                    "period). Consider a promotion, bundling, or reducing how much you restock."
+                )
+            else:
+                r["suggestion"] = (
+                    "Consistently your weakest seller. Consider a discount to clear stock, or "
+                    "phasing it out if margins are thin."
+                )
+        else:
+            r["tier"] = "steady"
+            if r["trend_pct"] > 20:
+                r["suggestion"] = f"Trending up (+{r['trend_pct']}%) — worth watching for a reorder bump."
+            elif r["trend_pct"] < -20:
+                r["suggestion"] = f"Trending down ({r['trend_pct']}%) — keep an eye on it."
+            else:
+                r["suggestion"] = "Selling steadily — current stocking levels look about right."
+
+    return {
+        "period_days": days,
+        "best_sellers": [r for r in rows if r["tier"] == "best_seller"],
+        "slow_movers": [r for r in rows if r["tier"] in ("slow_mover", "no_sales")],
+        "products": rows,
+    }
+
+
 def get_analytics_summary(user_id: int, db: Session, days: int = 30) -> dict:
     """Sales analytics: revenue, profit, top products, revenue by day."""
     since = datetime.utcnow() - timedelta(days=days)
@@ -214,7 +326,7 @@ def get_analytics_summary(user_id: int, db: Session, days: int = 30) -> dict:
         Sale.created_at >= since
     ).all()
 
-    # Revenue is net of VAT  VAT collected isn't business income, it's owed to KRA.
+    # Revenue is net of VAT — VAT collected isn't business income, it's owed to KRA.
     total_revenue = sum(s.subtotal_amount for s in sales)
     total_vat_collected = sum(s.tax_amount for s in sales)
     total_sales = len(sales)

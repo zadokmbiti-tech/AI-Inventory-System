@@ -16,9 +16,38 @@
   --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
+/* ── Light theme override ─────────────────────────────────────────────── */
+:root[data-theme="light"] {
+  --bg:         #f4f5f8;
+  --surface:    #ffffff;
+  --surface2:   #eef0f5;
+  --border:     #dde1ea;
+  --text:       #1c1f2a;
+  --text-muted: #6b7280;
+  --accent:     #4f8ef7;
+  --accent-dim: #e4edfe;
+  --green:      #1ba368;
+  --yellow:     #b8790f;
+  --red:        #d92d4d;
+  --orange:     #d9520f;
+}
+:root[data-theme="light"] .alert-card.out_of_stock { background: #fdecef; }
+:root[data-theme="light"] .pill-ok   { background: #e2f6ec; }
+:root[data-theme="light"] .pill-low  { background: #fdf1e0; }
+:root[data-theme="light"] .pill-out  { background: #fce3e8; }
+
+/* ── Theme toggle ─────────────────────────────────────────────────────── */
+.theme-toggle {
+  display: flex; align-items: center; gap: 0.5rem;
+  padding: 0.5rem 0; margin-bottom: 0.6rem;
+  color: var(--text-muted); font-size: 0.85rem; cursor: pointer;
+  background: transparent; border: none; width: 100%;
+}
+.theme-toggle:hover { color: var(--text); }
+
 /* ── Reset ────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; height: 100vh; overflow: hidden; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; height: 100vh; overflow: hidden; transition: background .2s, color .2s; }
 a { cursor: pointer; text-decoration: none; }
 input, select, button, textarea { font-family: var(--font); font-size: 14px; }
 input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
