@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -118,7 +118,7 @@ def _build_forecast_summary(
 ) -> dict:
     """
     Plain-language version of the forecast, written for a shop owner rather
-    than a data analyst — no 'method', 'data points', or decimal demand
+    than a data analyst  no 'method', 'data points', or decimal demand
     numbers, just what's likely to sell and what to do about it.
     """
     unit = product.unit or "pcs"
@@ -136,7 +136,7 @@ def _build_forecast_summary(
         confidence = "medium"
         confidence_note = (
             f"Based on only {data_points_used} day(s) of sales so far, so treat this as a rough "
-            "guide — it'll sharpen up the more sales you record."
+            "guide  it'll sharpen up the more sales you record."
         )
     else:
         confidence = "high"
@@ -164,7 +164,7 @@ def _build_forecast_summary(
 def _build_weekly_forecast(forecast_points: list, unit: str) -> list:
     """
     Groups daily (fractional) predictions into 7-day totals, rounded to
-    whole units. A retailer can act on 'about 7 bottles this week' — a
+    whole units. A retailer can act on 'about 7 bottles this week'  a
     jagged daily line hovering around 1.0 isn't useful for anything you
     sell as whole pieces.
     """
@@ -219,7 +219,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
     avg_daily_demand = 0.0
 
     if len(rows) >= 10:
-        # Enough data — use Prophet
+        # Enough data  use Prophet
         try:
             from prophet import Prophet
             df = pd.DataFrame(rows, columns=["ds", "y"])
@@ -255,7 +255,7 @@ def forecast_demand(product_id: int, user_id: int, db: Session, days_ahead: int 
             avg_daily_demand = np.mean([p["predicted_demand"] for p in forecast_points]) if forecast_points else 0.0
 
     else:
-        # Not enough data — simple moving average forecast
+        # Not enough data  simple moving average forecast
         forecast_points = _simple_forecast(rows, days_ahead)
         avg_daily_demand = np.mean([p["predicted_demand"] for p in forecast_points]) if forecast_points else 0.0
 
@@ -304,13 +304,13 @@ def _simple_forecast(rows: list, days_ahead: int) -> list:
 def get_product_performance_insights(user_id: int, db: Session, days: int = 30) -> dict:
     """
     Ranks every active product by how well it's selling relative to the
-    others, and attaches a plain-language suggestion for each — e.g. a
+    others, and attaches a plain-language suggestion for each  e.g. a
     best seller worth stocking more of, a slow mover worth discounting or
     dropping, or a product trending up/down versus the first half of the
     period.
     """
-    since = datetime.utcnow() - timedelta(days=days)
-    midpoint = datetime.utcnow() - timedelta(days=days / 2)
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    midpoint = datetime.now(timezone.utc) - timedelta(days=days / 2)
 
     products = db.query(Product).filter(
         Product.user_id == user_id,
@@ -399,11 +399,11 @@ def get_product_performance_insights(user_id: int, db: Session, days: int = 30) 
         else:
             r["tier"] = "steady"
             if r["trend_pct"] > 20:
-                r["suggestion"] = f"Trending up (+{r['trend_pct']}%) — worth watching for a reorder bump."
+                r["suggestion"] = f"Trending up (+{r['trend_pct']}%)  worth watching for a reorder bump."
             elif r["trend_pct"] < -20:
-                r["suggestion"] = f"Trending down ({r['trend_pct']}%) — keep an eye on it."
+                r["suggestion"] = f"Trending down ({r['trend_pct']}%)  keep an eye on it."
             else:
-                r["suggestion"] = "Selling steadily — current stocking levels look about right."
+                r["suggestion"] = "Selling steadily  current stocking levels look about right."
 
     return {
         "period_days": days,
@@ -422,7 +422,7 @@ def get_analytics_summary(user_id: int, db: Session, days: int = 30) -> dict:
         Sale.created_at >= since
     ).all()
 
-    # Revenue is net of VAT — VAT collected isn't business income, it's owed to KRA.
+    # Revenue is net of VAT  VAT collected isn't business income, it's owed to KRA.
     total_revenue = sum(s.subtotal_amount for s in sales)
     total_vat_collected = sum(s.tax_amount for s in sales)
     total_sales = len(sales)

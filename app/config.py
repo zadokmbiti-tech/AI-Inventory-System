@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     reset_token_expire_minutes: int = 30
     frontend_base_url: str = "http://localhost:8000"
 
-    # Resend (optional — if unset, reset links are logged to console instead of emailed)
+    # Resend (optional  if unset, reset links are logged to console instead of emailed)
     resend_api_key: str = ""
     email_from: str = "SmartStock AI <onboarding@resend.dev>"
 

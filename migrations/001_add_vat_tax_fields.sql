@@ -1,6 +1,6 @@
 -- Migration: add Kenyan VAT/tax fields to products, sales, sale_items
 -- Run this once against your existing database (the app's Base.metadata.create_all()
--- only creates NEW tables on startup — it will NOT add these columns to tables
+-- only creates NEW tables on startup  it will NOT add these columns to tables
 -- that already exist, so this migration is required).
 --
 -- Usage:
@@ -41,7 +41,7 @@ COMMIT;
 -- because we don't know what, if any, VAT was actually charged on those past sales.
 -- Only sales recorded AFTER this migration will carry accurate VAT figures.
 
--- 5. Licenses table (new table — created automatically by the app's
+-- 5. Licenses table (new table  created automatically by the app's
 --    Base.metadata.create_all() on startup, but included here for completeness
 --    if you'd rather apply it explicitly / ahead of time).
 BEGIN;
@@ -86,7 +86,7 @@ SELECT
 FROM users u
 WHERE NOT EXISTS (SELECT 1 FROM licenses l WHERE l.user_id = u.id);
 
--- 7. Widen document_records.file_path — Vercel Blob URLs are longer than
+-- 7. Widen document_records.file_path  Vercel Blob URLs are longer than
 --    the local disk paths this column originally stored.
 ALTER TABLE document_records
     ALTER COLUMN file_path TYPE VARCHAR(1000);

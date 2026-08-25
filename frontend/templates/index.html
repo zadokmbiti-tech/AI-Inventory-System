@@ -76,11 +76,23 @@
     Your license has expired. <a href="#" style="color:#f5365c; text-decoration:underline" onclick="showPage('subscription'); return false;">Renew now</a> to keep using SmartStock AI.
   </div>
 
+  <!-- Mobile top bar (hidden on desktop) -->
+  <div class="mobile-topbar">
+    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="mobile-topbar-brand"><span class="brand-icon">▦</span> SmartStock <b>AI</b></div>
+  </div>
+
+  <!-- Sidebar overlay (mobile only) -->
+  <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
+
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <span class="brand-icon">▦</span>
       <span>SmartStock <b>AI</b></span>
+      <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Close menu">✕</button>
     </div>
     <nav>
       <a class="nav-link active" onclick="showPage('dashboard')" data-page="dashboard">
@@ -138,23 +150,23 @@
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">Revenue</div>
-          <div class="kpi-value" id="kpi-revenue">—</div>
+          <div class="kpi-value" id="kpi-revenue"></div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">VAT Collected</div>
-          <div class="kpi-value" id="kpi-vat">—</div>
+          <div class="kpi-value" id="kpi-vat"></div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Gross Profit</div>
-          <div class="kpi-value" id="kpi-profit">—</div>
+          <div class="kpi-value" id="kpi-profit"></div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Margin</div>
-          <div class="kpi-value" id="kpi-margin">—</div>
+          <div class="kpi-value" id="kpi-margin"></div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Sales</div>
-          <div class="kpi-value" id="kpi-sales">—</div>
+          <div class="kpi-value" id="kpi-sales"></div>
         </div>
       </div>
 
@@ -201,10 +213,12 @@
           <input type="number" id="sale-price" placeholder="Unit price" step="0.01" />
           <button class="btn-secondary" onclick="addSaleItem()">Add</button>
         </div>
-        <table class="data-table" id="sale-items-table">
-          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Subtotal</th><th></th></tr></thead>
-          <tbody id="sale-items-tbody"></tbody>
-        </table>
+        <div class="table-scroll">
+          <table class="data-table" id="sale-items-table">
+            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Subtotal</th><th></th></tr></thead>
+            <tbody id="sale-items-tbody"></tbody>
+          </table>
+        </div>
         <div class="sale-total-row">
           <span>Subtotal: <strong id="sale-subtotal">KES 0.00</strong> &nbsp;·&nbsp; VAT: <strong id="sale-vat">KES 0.00</strong> &nbsp;·&nbsp; Total: <strong id="sale-total">KES 0.00</strong></span>
           <select id="payment-method">
@@ -377,9 +391,6 @@
         </div>
         <button class="btn-primary" style="margin-top:1rem" onclick="renewLicense()">Renew for 30 Days</button>
         <p style="color:var(--text-muted);font-size:.8rem;margin-top:.75rem">
-          Renewal is a placeholder until M-Pesa STK Push is wired in — clicking this
-          simulates a successful payment and issues a new 30-day key. In production
-          this should be triggered by the M-Pesa payment callback, not this button.
         </p>
         <div id="license-success" class="success-msg" style="display:none"></div>
       </div>
@@ -422,10 +433,10 @@
         <div class="form-group">
           <label>Tax Category (Kenya VAT)</label>
           <select id="p-tax-category" onchange="onTaxCategoryChange()">
-            <option value="STANDARD">Standard — 16%</option>
+            <option value="STANDARD">Standard  16%</option>
             <option value="REDUCED">Reduced (custom rate)</option>
-            <option value="ZERO_RATED">Zero-rated — 0% (exports, basic food, medical)</option>
-            <option value="EXEMPT">Exempt — no VAT</option>
+            <option value="ZERO_RATED">Zero-rated  0% (exports, basic food, medical)</option>
+            <option value="EXEMPT">Exempt  no VAT</option>
           </select>
         </div>
         <div class="form-group">
