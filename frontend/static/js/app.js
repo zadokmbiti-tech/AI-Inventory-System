@@ -23,10 +23,27 @@ async function apiFetch(path, opts = {}) {
   const data = await res.json().catch(() => null);
   if (res.status === 402) {
     document.getElementById('license-banner').style.display = 'block';
-    throw new Error(data?.detail || 'Your license has expired. Please renew.');
+    throw new Error(extractErrorMessage(data) || 'Your license has expired. Please renew.');
   }
-  if (!res.ok) throw new Error(data?.detail || 'Request failed');
+  if (!res.ok) throw new Error(extractErrorMessage(data) || 'Request failed');
   return data;
+}
+
+function extractErrorMessage(data) {
+  // FastAPI/Pydantic validation errors (422) return `detail` as an array of
+  // {msg, loc, ...} objects rather than a plain string — stringifying that
+  // array directly (or passing it straight to `new Error()`) produces
+  // "[object Object]". Pull out a readable message in both cases.
+  const detail = data?.detail;
+  if (!detail) return null;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map(d => (typeof d === 'string' ? d : d?.msg))
+      .filter(Boolean)
+      .join('; ') || 'Invalid input';
+  }
+  return 'Invalid input';
 }
 
 function toast(msg, type = 'info') {
@@ -115,7 +132,7 @@ async function requestPasswordReset() {
       body: JSON.stringify({ email })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Something went wrong');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Something went wrong');
     showAuthSuccess(data.message || 'If that email is registered, a reset link has been sent.');
   } catch (e) {
     showAuthError(e.message);
@@ -137,7 +154,7 @@ async function submitPasswordReset() {
       body: JSON.stringify({ token: resetToken, new_password: pass })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Reset failed');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Reset failed');
     showAuthSuccess('Password updated — you can sign in now.');
     // Clean the token out of the URL and return to the sign-in tab
     window.history.replaceState({}, document.title, window.location.pathname);
@@ -158,7 +175,7 @@ async function login() {
       body: form.toString()
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Login failed');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Login failed');
     // The server already set the httpOnly auth cookie in this response —
     // nothing to store client-side.
     isAuthenticated = true;
@@ -551,7 +568,7 @@ async function submitDocument() {
       body: formData
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(data?.detail || 'Could not save record');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Could not save record');
 
     ['doc-ref', 'doc-party', 'doc-amount', 'doc-date', 'doc-notes'].forEach(id => document.getElementById(id).value = '');
     fileInput.value = '';
@@ -589,7 +606,7 @@ async function deleteDocument(id) {
     });
     if (!res.ok && res.status !== 204) {
       const data = await res.json().catch(() => null);
-      throw new Error(data?.detail || 'Could not delete record');
+      throw new Error(extractErrorMessage(data) || 'Could not delete record');
     }
     toast('Record deleted', 'ok');
     await loadDocuments();
@@ -816,7 +833,7 @@ async function loadLicenseStatus() {
       banner.style.display = 'none';
       return;
     }
-    if (!res.ok) throw new Error(data?.detail || 'Could not load license status');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Could not load license status');
 
     const expired = data.status !== 'ACTIVE' || data.days_remaining <= 0;
     banner.style.display = expired ? 'block' : 'none';
@@ -846,7 +863,7 @@ async function renewLicense() {
       body: JSON.stringify({ plan: 'monthly' }),
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(data?.detail || 'Renewal failed');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Renewal failed');
     const msg = document.getElementById('license-success');
     msg.textContent = `✓ Renewed! New key: ${data.license_key} (also emailed to you)`;
     msg.style.display = 'block';
