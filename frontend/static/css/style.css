@@ -1,4 +1,3 @@
-/* ── Variables ─────────────────────────────────────────────────────────── */
 :root {
   --bg:         #0d0f14;
   --surface:    #161a24;
@@ -16,7 +15,6 @@
   --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
-/* ── Light theme override ─────────────────────────────────────────────── */
 :root[data-theme="light"] {
   --bg:         #f4f5f8;
   --surface:    #ffffff;
@@ -36,7 +34,6 @@
 :root[data-theme="light"] .pill-low  { background: #fdf1e0; }
 :root[data-theme="light"] .pill-out  { background: #fce3e8; }
 
-/* ── Theme toggle ─────────────────────────────────────────────────────── */
 .theme-toggle {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0.5rem 0; margin-bottom: 0.6rem;
@@ -45,14 +42,12 @@
 }
 .theme-toggle:hover { color: var(--text); }
 
-/* ── Reset ────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; height: 100vh; overflow: hidden; transition: background .2s, color .2s; }
 a { cursor: pointer; text-decoration: none; }
 input, select, button, textarea { font-family: var(--font); font-size: 14px; }
 input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
 
-/* ── Auth ─────────────────────────────────────────────────────────────── */
 .auth-screen {
   display: flex; align-items: center; justify-content: center;
   height: 100vh; background: var(--bg);
@@ -80,7 +75,6 @@ input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
 }
 .auth-box input:focus { outline: none; border-color: var(--accent); }
 
-/* ── Password requirements checklist ────────────────────────────────────── */
 .password-requirements {
   list-style: none; margin: -0.35rem 0 0.9rem; padding: 0;
   display: flex; flex-direction: column; gap: 0.3rem;
@@ -102,10 +96,10 @@ input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
   color: #0b1710;
 }
 
-/* ── App Shell ────────────────────────────────────────────────────────── */
 #app { display: flex; height: 100vh; overflow: hidden; }
 
-/* ── Sidebar ──────────────────────────────────────────────────────────── */
+.app-hidden { display: none !important; }
+
 .sidebar {
   width: 220px; background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; flex-shrink: 0;
@@ -135,14 +129,12 @@ nav { flex: 1; padding: 0.75rem 0; }
 }
 #sidebar-user { display: block; margin-bottom: 0.4rem; font-weight: 500; color: var(--text); }
 
-/* ── Main Content ─────────────────────────────────────────────────────── */
 .main-content { flex: 1; overflow-y: auto; padding: 1.75rem 2rem; }
 .page { display: none; }
 .page.active { display: block; }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
 .page-header h2 { font-size: 1.2rem; font-weight: 700; }
 
-/* ── KPI Grid ─────────────────────────────────────────────────────────── */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
 .kpi-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -151,7 +143,6 @@ nav { flex: 1; padding: 0.75rem 0; }
 .kpi-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 0.4rem; }
 .kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--text); }
 
-/* ── Charts ───────────────────────────────────────────────────────────── */
 .charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
 .chart-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -160,7 +151,6 @@ nav { flex: 1; padding: 0.75rem 0; }
 .chart-card h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin-bottom: 1rem; }
 .chart-card.wide { grid-column: auto; }
 
-/* ── Table ────────────────────────────────────────────────────────────── */
 .data-table { width: 100%; border-collapse: collapse; }
 .data-table th {
   text-align: left; padding: 0.65rem 0.9rem;
@@ -171,7 +161,6 @@ nav { flex: 1; padding: 0.75rem 0; }
 .data-table tr:hover td { background: var(--surface2); }
 #products-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
 
-/* ── Forms ────────────────────────────────────────────────────────────── */
 .form-card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 1.5rem; max-width: 520px;
@@ -186,7 +175,6 @@ input, select {
 }
 input:focus, select:focus { outline: none; border-color: var(--accent); }
 
-/* ── Filter Row ───────────────────────────────────────────────────────── */
 .filter-row {
   display: flex; align-items: center; gap: 1rem;
   margin-bottom: 1rem;
@@ -195,7 +183,6 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .filter-row label { display: flex; align-items: center; gap: 0.4rem; color: var(--text-muted); font-size: 0.85rem; cursor: pointer; }
 .filter-row input[type=checkbox] { width: auto; }
 
-/* ── Sale Builder ─────────────────────────────────────────────────────── */
 .sale-builder { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; }
 .sale-add-row { display: flex; gap: 0.75rem; margin-bottom: 1rem; align-items: center; }
 .sale-add-row select { flex: 2; }
@@ -203,7 +190,6 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .sale-total-row { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; justify-content: flex-end; }
 #sale-total { font-size: 1.1rem; color: var(--accent); }
 
-/* ── Alerts ───────────────────────────────────────────────────────────── */
 .alert-card {
   display: flex; align-items: center; gap: 1rem;
   background: var(--surface); border: 1px solid var(--border);
@@ -224,11 +210,9 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .urgency-badge.warning  { background: var(--yellow); color: #000; }
 .urgency-badge.low      { background: var(--orange); color: #fff; }
 
-/* ── Forecast ─────────────────────────────────────────────────────────── */
 .forecast-controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; }
 .forecast-controls select { width: auto; min-width: 200px; }
 
-/* ── Top Products List ────────────────────────────────────────────────── */
 .top-product-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
 .top-product-row:last-child { border-bottom: none; }
 .top-product-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
@@ -236,7 +220,6 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .top-product-name { flex: 2; font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .top-product-revenue { font-size: 0.82rem; color: var(--green); font-weight: 600; min-width: 80px; text-align: right; }
 
-/* ── Buttons ──────────────────────────────────────────────────────────── */
 .btn-primary {
   padding: 0.55rem 1.2rem; background: var(--accent); color: #fff;
   border: none; border-radius: var(--radius); cursor: pointer; font-weight: 600;
@@ -253,10 +236,8 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .btn-ghost:hover { color: var(--text); }
 .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
 
-/* ── Period Select ────────────────────────────────────────────────────── */
 .period-select { width: auto; padding: 0.4rem 0.8rem; }
 
-/* ── Stock Status Pill ────────────────────────────────────────────────── */
 .pill {
   display: inline-block; padding: 0.15rem 0.55rem;
   border-radius: 99px; font-size: 0.72rem; font-weight: 600;
@@ -265,7 +246,6 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .pill-low  { background: #2e1d08; color: var(--orange); }
 .pill-out  { background: #2e0a12; color: var(--red); }
 
-/* ── Modal ────────────────────────────────────────────────────────────── */
 .modal {
   position: fixed; inset: 0; background: rgba(0,0,0,.65);
   display: flex; align-items: center; justify-content: center; z-index: 100;
@@ -285,7 +265,6 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
   padding: 1rem 1.5rem; border-top: 1px solid var(--border);
 }
 
-/* ── Toast & Messages ─────────────────────────────────────────────────── */
 .toast {
   position: fixed; bottom: 1.5rem; right: 1.5rem;
   padding: 0.75rem 1.25rem; border-radius: var(--radius);
@@ -300,16 +279,13 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 .auth-link a { color: var(--accent, #7c6cf3); text-decoration: none; }
 .auth-link a:hover { text-decoration: underline; }
 
-/* ── Scrollbar ────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-/* ── Table scroll (mobile-safe tables) ──────────────────────────────────── */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 #products-table-wrap, #documents-table-wrap { overflow-x: auto; }
 
-/* ── Mobile top bar & hamburger (hidden on desktop) ─────────────────────── */
 .mobile-topbar { display: none; }
 .hamburger-btn {
   display: flex; flex-direction: column; justify-content: center; gap: 4px;
@@ -326,10 +302,7 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
   z-index: 199;
 }
 
-/* ── Responsive breakpoints ──────────────────────────────────────────────
-   Tablet / small desktop: tighten spacing, 2-col KPIs, stacked charts.
-   Phone: off-canvas sidebar, single-column forms, scrollable tables.
-   ────────────────────────────────────────────────────────────────────── */
+
 @media (max-width: 900px) {
   .charts-row { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -339,16 +312,21 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
   body { overflow: auto; height: auto; min-height: 100vh; }
   #app { display: block; height: auto; min-height: 100vh; }
 
-  /* Mobile top bar replaces the inline sidebar brand */
   .mobile-topbar {
     display: flex; align-items: center; gap: 0.75rem;
-    position: sticky; top: 0; z-index: 150;
+    position: sticky; top: 0; left: 0; z-index: 150;
     background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 0.75rem 1rem;
+    padding: 0;
   }
-  .mobile-topbar-brand { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+  .hamburger-btn {
+    width: 48px; height: 48px;
+    padding: 0 0 0 0.6rem;
+  }
+  .mobile-topbar-brand {
+    font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.75rem 1rem 0.75rem 0;
+  }
 
-  /* Sidebar becomes an off-canvas drawer */
   .sidebar {
     position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
     width: 78vw; max-width: 300px;
