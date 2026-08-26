@@ -36,7 +36,7 @@ def register(request: Request, payload: UserCreate, db: Session = Depends(get_db
     db.commit()
     db.refresh(user)
 
-    # No license is issued here on purpose — a new business can sign in
+    # No license is issued here on purpose  a new business can sign in
     # right away, but every feature stays behind require_active_license
     # (402) until a super_admin approves and activates them from the
     # Admin panel. See app/routers/license.py for the request-activation

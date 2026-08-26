@@ -16,7 +16,7 @@ settings = get_settings()
 COOKIE_NAME = "ss_access_token"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# auto_error=False: don't 401 just because the header is missing — we also
+# auto_error=False: don't 401 just because the header is missing  we also
 # accept the token from an httpOnly cookie (see get_current_user below), so
 # the header is only one of two valid ways to authenticate.
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
@@ -105,7 +105,7 @@ def get_current_user(
 def require_super_admin(user: User = Depends(get_current_user)) -> User:
     """
     Attach to any admin-only endpoint. 403s any normal business account
-    trying to reach the platform-management API — a business owner having
+    trying to reach the platform-management API  a business owner having
     a valid login doesn't mean they can see other businesses' data.
     """
     if user.role != UserRole.SUPER_ADMIN:
@@ -120,7 +120,7 @@ def log_login_event(db: Session, user_id: int, request: Request) -> None:
     failure should never block an actual login.
 
     Behind a reverse proxy (Vercel, nginx, etc.) `request.client.host` is
-    the proxy's own IP for every request, not the visitor's — that would
+    the proxy's own IP for every request, not the visitor's  that would
     silently break IP-based sharing detection (every login looks like the
     same "IP"). Prefer the standard X-Forwarded-For header, which proxies
     set to the real client IP (first entry in the comma-separated chain).

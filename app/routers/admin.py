@@ -1,6 +1,6 @@
 """
 Platform-operator (super_admin) endpoints. These sit outside the normal
-per-business data model — a super_admin isn't "a business" and never goes
+per-business data model  a super_admin isn't "a business" and never goes
 through require_active_license; they manage every business's account and
 subscription instead of using the product themselves.
 """
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"], dependencies=[Depends(re
 
 # Login-sharing heuristic: within a 7-day window, this many *distinct* IPs
 # or *distinct* devices on one login is treated as a flag. Neither signal
-# alone is proof (people travel, IPs rotate on mobile data) — it's a
+# alone is proof (people travel, IPs rotate on mobile data)  it's a
 # starting point for you to look closer at, not an automatic ban.
 SHARING_WINDOW_DAYS = 7
 DISTINCT_IP_FLAG_THRESHOLD = 3
@@ -135,7 +135,7 @@ def activate_business(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("/businesses/{user_id}/license", response_model=AdminBusinessOut)
 def adjust_license(user_id: int, payload: AdminLicenseAdjustRequest, db: Session = Depends(get_db)):
-    """Manually grant/extend a license — e.g. after confirming payment outside the app."""
+    """Manually grant/extend a license  e.g. after confirming payment outside the app."""
     user = db.query(User).filter(User.id == user_id, User.role == UserRole.OWNER).first()
     if not user:
         raise HTTPException(status_code=404, detail="Business not found")
@@ -158,7 +158,7 @@ def revoke_license(user_id: int, db: Session = Depends(get_db)):
 
 
 # ─── Activation requests ─────────────────────────────────────────────────────
-# A business can't activate itself — see app/routers/license.py. This is the
+# A business can't activate itself  see app/routers/license.py. This is the
 # queue of "please activate/renew me" requests for you to act on.
 
 @router.get("/license-requests", response_model=List[AdminLicenseRequestOut])

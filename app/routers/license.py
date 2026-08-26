@@ -30,7 +30,7 @@ def _to_out(license_) -> LicenseOut:
 
 @router.get("/status", response_model=LicenseOut)
 def license_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Current license for the logged-in business — active, expired, or none yet."""
+    """Current license for the logged-in business  active, expired, or none yet."""
     license_ = get_current_license(db, user.id)
     if not license_:
         raise HTTPException(status_code=404, detail="No license yet. Request activation to get started.")
@@ -59,7 +59,7 @@ def request_license(
 ):
     """
     Ask a super_admin to activate or renew this business's license. This
-    does NOT grant access by itself — it only shows up in the Admin panel
+    does NOT grant access by itself  it only shows up in the Admin panel
     for a human to review and approve. Only one pending request is kept
     per business at a time to avoid spamming the queue.
     """

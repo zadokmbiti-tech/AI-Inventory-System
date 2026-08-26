@@ -1,7 +1,7 @@
 -- Migration: license requests (approval-gated activation).
 --
 -- Registration no longer auto-grants a trial license, and there's no
--- self-service instant renewal — a business must ask, and only a
+-- self-service instant renewal  a business must ask, and only a
 -- super_admin activating them from the Admin panel actually grants access.
 --
 -- Usage:
