@@ -43,12 +43,7 @@
       <input type="text" id="reg-name" placeholder="Your Name" />
       <input type="text" id="reg-business" placeholder="Business Name" />
       <input type="email" id="reg-email" placeholder="Email" />
-      <input type="password" id="reg-password" placeholder="Password" oninput="checkPasswordRequirements()" />
-      <ul id="password-requirements" class="password-requirements">
-        <li id="req-length"><span class="req-icon">○</span> At least 8 characters</li>
-        <li id="req-letter"><span class="req-icon">○</span> At least one letter</li>
-        <li id="req-digit"><span class="req-icon">○</span> At least one number</li>
-      </ul>
+      <input type="password" id="reg-password" placeholder="Password" />
       <button class="btn-primary" onclick="register()">Create Account</button>
     </div>
 
@@ -75,29 +70,17 @@
 </div>
 
 <!-- ── App Shell ───────────────────────────────────────────────────────── -->
-<div id="app" class="app-hidden">
+<div id="app" style="display:none">
 
   <div id="license-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:1000; background:#2e0a12; color:#f5365c; padding:.6rem 1.25rem; font-size:.85rem; text-align:center">
     Your license has expired. <a href="#" style="color:#f5365c; text-decoration:underline" onclick="showPage('subscription'); return false;">Renew now</a> to keep using SmartStock AI.
   </div>
 
-  <!-- Mobile top bar (hidden on desktop) -->
-  <div class="mobile-topbar">
-    <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Open menu">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="mobile-topbar-brand"><span class="brand-icon">▦</span> SmartStock <b>AI</b></div>
-  </div>
-
-  <!-- Sidebar overlay (mobile only) -->
-  <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()"></div>
-
   <!-- Sidebar -->
-  <aside class="sidebar" id="sidebar">
+  <aside class="sidebar">
     <div class="sidebar-brand">
       <span class="brand-icon">▦</span>
       <span>SmartStock <b>AI</b></span>
-      <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Close menu">✕</button>
     </div>
     <nav>
       <a class="nav-link active" onclick="showPage('dashboard')" data-page="dashboard">
@@ -124,9 +107,6 @@
       </a>
       <a class="nav-link" onclick="showPage('subscription')" data-page="subscription">
         <span class="nav-icon">🔑</span> Subscription
-      </a>
-      <a class="nav-link" id="admin-nav-link" onclick="showPage('admin')" data-page="admin" style="display:none">
-        <span class="nav-icon">🛡</span> Admin
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -158,23 +138,23 @@
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-label">Revenue</div>
-          <div class="kpi-value" id="kpi-revenue"></div>
+          <div class="kpi-value" id="kpi-revenue">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">VAT Collected</div>
-          <div class="kpi-value" id="kpi-vat"></div>
+          <div class="kpi-value" id="kpi-vat">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Gross Profit</div>
-          <div class="kpi-value" id="kpi-profit"></div>
+          <div class="kpi-value" id="kpi-profit">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Margin</div>
-          <div class="kpi-value" id="kpi-margin"></div>
+          <div class="kpi-value" id="kpi-margin">—</div>
         </div>
         <div class="kpi-card">
           <div class="kpi-label">Sales</div>
-          <div class="kpi-value" id="kpi-sales"></div>
+          <div class="kpi-value" id="kpi-sales">—</div>
         </div>
       </div>
 
@@ -221,12 +201,10 @@
           <input type="number" id="sale-price" placeholder="Unit price" step="0.01" />
           <button class="btn-secondary" onclick="addSaleItem()">Add</button>
         </div>
-        <div class="table-scroll">
-          <table class="data-table" id="sale-items-table">
-            <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Subtotal</th><th></th></tr></thead>
-            <tbody id="sale-items-tbody"></tbody>
-          </table>
-        </div>
+        <table class="data-table" id="sale-items-table">
+          <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Subtotal</th><th></th></tr></thead>
+          <tbody id="sale-items-tbody"></tbody>
+        </table>
         <div class="sale-total-row">
           <span>Subtotal: <strong id="sale-subtotal">KES 0.00</strong> &nbsp;·&nbsp; VAT: <strong id="sale-vat">KES 0.00</strong> &nbsp;·&nbsp; Total: <strong id="sale-total">KES 0.00</strong></span>
           <select id="payment-method">
@@ -399,7 +377,7 @@
         </div>
         <button class="btn-primary" style="margin-top:1rem" onclick="renewLicense()">Renew for 30 Days</button>
         <p style="color:var(--text-muted);font-size:.8rem;margin-top:.75rem">
-          Renewal is a placeholder until M-Pesa STK Push is wired in  clicking this
+          Renewal is a placeholder until M-Pesa STK Push is wired in — clicking this
           simulates a successful payment and issues a new 30-day key. In production
           this should be triggered by the M-Pesa payment callback, not this button.
         </p>
@@ -407,59 +385,7 @@
       </div>
     </section>
 
-    <!-- ── Admin (super_admin only) ────────────────────────────────── -->
-    <section id="page-admin" class="page">
-      <div class="page-header">
-        <h2>Businesses</h2>
-        <input type="text" id="admin-search" placeholder="Search businesses…" oninput="filterAdminBusinesses()" style="max-width:260px" />
-      </div>
-      <p style="color:var(--text-muted);font-size:.82rem;margin:-.5rem 0 1rem">
-        A <span class="pill pill-low" style="padding:1px 6px">flagged</span> business has logged in
-        from ≥3 different networks or devices in the last 7 days  worth a closer look, not
-        automatic proof of account sharing.
-      </p>
-      <div class="table-scroll">
-        <table class="data-table" id="admin-businesses-table">
-          <thead><tr>
-            <th>Business</th><th>Owner</th><th>Email</th><th>License</th><th>Expires</th>
-            <th>Products</th><th>Sales</th><th>Logins (7d)</th><th>IPs / Devices (7d)</th>
-            <th>Status</th><th></th>
-          </tr></thead>
-          <tbody id="admin-businesses-tbody"></tbody>
-        </table>
-      </div>
-    </section>
-
   </main>
-</div>
-
-<!-- ── Admin License Modal ────────────────────────────────────────────── -->
-<div id="admin-license-modal" class="modal" style="display:none">
-  <div class="modal-box">
-    <div class="modal-header">
-      <h3>Grant / Extend License</h3>
-      <button onclick="closeModal('admin-license-modal')" class="btn-ghost">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="admin-license-user-id" />
-      <div class="form-group">
-        <label>Days</label>
-        <input type="number" id="admin-license-days" value="30" min="1" />
-      </div>
-      <div class="form-group">
-        <label>Plan</label>
-        <select id="admin-license-plan">
-          <option value="monthly">Monthly</option>
-          <option value="trial">Trial</option>
-          <option value="annual">Annual</option>
-        </select>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeModal('admin-license-modal')">Cancel</button>
-      <button class="btn-primary" onclick="submitAdminLicense()">Save</button>
-    </div>
-  </div>
 </div>
 
 <!-- ── Product Modal ──────────────────────────────────────────────────── -->
@@ -496,10 +422,10 @@
         <div class="form-group">
           <label>Tax Category (Kenya VAT)</label>
           <select id="p-tax-category" onchange="onTaxCategoryChange()">
-            <option value="STANDARD">Standard  16%</option>
+            <option value="STANDARD">Standard — 16%</option>
             <option value="REDUCED">Reduced (custom rate)</option>
-            <option value="ZERO_RATED">Zero-rated  0% (exports, basic food, medical)</option>
-            <option value="EXEMPT">Exempt  no VAT</option>
+            <option value="ZERO_RATED">Zero-rated — 0% (exports, basic food, medical)</option>
+            <option value="EXEMPT">Exempt — no VAT</option>
           </select>
         </div>
         <div class="form-group">

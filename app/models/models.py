@@ -8,11 +8,6 @@ import enum
 from app.database import Base
 
 
-class UserRole(str, enum.Enum):
-    OWNER = "owner"                # a business using the product
-    SUPER_ADMIN = "super_admin"    # platform operator  you
-
-
 class User(Base):
     __tablename__ = "users"
 
@@ -21,11 +16,6 @@ class User(Base):
     email = Column(String(150), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     business_name = Column(String(150))
-    role = Column(
-        SAEnum(UserRole, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
-        nullable=False,
-        default=UserRole.OWNER,
-    )
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -34,25 +24,6 @@ class User(Base):
     documents = relationship("DocumentRecord", back_populates="owner")
     reset_tokens = relationship("PasswordResetToken", back_populates="user")
     licenses = relationship("License", back_populates="user")
-    login_events = relationship("LoginEvent", back_populates="user")
-
-
-class LoginEvent(Base):
-    """
-    One row per successful login. This is what account-sharing detection
-    is built on: if the same account logs in from an unusual number of
-    distinct IPs/devices in a short window, that's a signal the login
-    (not the product) is being shared between businesses.
-    """
-    __tablename__ = "login_events"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    ip_address = Column(String(64))
-    user_agent = Column(String(500))
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
-
-    user = relationship("User", back_populates="login_events")
 
 
 class PasswordResetToken(Base):
@@ -92,8 +63,8 @@ class License(Base):
 
 class TaxCategory(str, enum.Enum):
     STANDARD = "STANDARD"       # 16% general VAT rate (KRA VAT Act 2013, current as of 2026)
-    REDUCED = "REDUCED"         # e.g. certain petroleum products  rate set per product via tax_rate
-    ZERO_RATED = "ZERO_RATED"   # 0%  exports & Second Schedule items (basic foodstuffs, medical, ag inputs)
+    REDUCED = "REDUCED"         # e.g. certain petroleum products — rate set per product via tax_rate
+    ZERO_RATED = "ZERO_RATED"   # 0% — exports & Second Schedule items (basic foodstuffs, medical, ag inputs)
     EXEMPT = "EXEMPT"           # no VAT charged, no input VAT recovery
 
 

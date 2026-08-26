@@ -76,7 +76,7 @@ def record_sale(payload: SaleCreate, db: Session = Depends(get_db), user: User =
 
     grand_total = round(subtotal_total + tax_total, 2)
 
-    # All checks passed  commit everything
+    # All checks passed — commit everything
     sale = Sale(
         user_id=user.id,
         subtotal_amount=round(subtotal_total, 2),
@@ -127,7 +127,7 @@ def vat_summary(days: int = 30, db: Session = Depends(get_db), user: User = Depe
     """
     Output VAT summary for KRA filing purposes: net sales, VAT collected,
     and a breakdown by tax category (STANDARD / REDUCED / ZERO_RATED / EXEMPT).
-    This covers OUTPUT tax only (what you've charged customers)  it does not
+    This covers OUTPUT tax only (what you've charged customers) — it does not
     net off input VAT on your own purchases, which you'd still need for the
     actual iTax VAT return.
     """
@@ -168,6 +168,6 @@ def vat_summary(days: int = 30, db: Session = Depends(get_db), user: User = Depe
         disclaimer=(
             "Figures reflect output VAT only, based on rates set per product. "
             "Confirm product tax categorisation and current rates against the "
-            "VAT Act 2013 / latest KRA guidance before filing  this is not tax advice."
+            "VAT Act 2013 / latest KRA guidance before filing — this is not tax advice."
         ),
     )

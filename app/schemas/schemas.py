@@ -1,17 +1,7 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime
 from app.models.models import MovementType, DocumentType, TaxCategory, LicenseStatus
-
-
-def _validate_password_strength(password: str) -> str:
-    if len(password) < 8:
-        raise ValueError("Password must be at least 8 characters long")
-    if not any(c.isalpha() for c in password):
-        raise ValueError("Password must contain at least one letter")
-    if not any(c.isdigit() for c in password):
-        raise ValueError("Password must contain at least one number")
-    return password
 
 
 # ─── Auth ────────────────────────────────────────────────────────────────────
@@ -21,11 +11,6 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     business_name: Optional[str] = None
-
-    @field_validator("password")
-    @classmethod
-    def check_password_strength(cls, v: str) -> str:
-        return _validate_password_strength(v)
 
 
 class UserLogin(BaseModel):
@@ -38,7 +23,6 @@ class UserOut(BaseModel):
     name: str
     email: str
     business_name: Optional[str]
-    role: str
     created_at: datetime
 
     class Config:
@@ -57,11 +41,6 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
-
-    @field_validator("new_password")
-    @classmethod
-    def check_password_strength(cls, v: str) -> str:
-        return _validate_password_strength(v)
 
 
 # ─── Category ─────────────────────────────────────────────────────────────────
@@ -93,7 +72,7 @@ class ProductCreate(BaseModel):
     reorder_quantity: float = 0
     category_id: Optional[int] = None
     tax_category: TaxCategory = TaxCategory.STANDARD
-    tax_rate: float = 16.0  # %  default is Kenya's standard VAT rate; override for REDUCED items etc.
+    tax_rate: float = 16.0  # % — default is Kenya's standard VAT rate; override for REDUCED items etc.
 
 
 class ProductUpdate(BaseModel):
@@ -198,7 +177,7 @@ class SaleOut(BaseModel):
 class VatSummary(BaseModel):
     period_days: int
     net_sales: float           # total sales excluding VAT
-    output_vat_collected: float  # VAT charged to customers  what you owe KRA before input VAT credits
+    output_vat_collected: float  # VAT charged to customers — what you owe KRA before input VAT credits
     gross_sales: float          # net_sales + output_vat_collected
     by_tax_category: List[dict]  # breakdown: category, net_sales, vat_amount, count
     disclaimer: str
@@ -278,44 +257,3 @@ class LicenseRenewRequest(BaseModel):
     plan: str = "monthly"
     amount_paid: Optional[float] = None
     mpesa_receipt: Optional[str] = None
-
-
-# ─── Admin (super_admin only) ───────────────────────────────────────────────
-
-class AdminBusinessOut(BaseModel):
-    id: int
-    name: str
-    email: str
-    business_name: Optional[str]
-    is_active: bool
-    created_at: datetime
-    license_status: Optional[str] = None      # ACTIVE / EXPIRED / REVOKED / None (never subscribed)
-    license_plan: Optional[str] = None
-    license_expires_at: Optional[datetime] = None
-    product_count: int = 0
-    sales_count: int = 0
-    last_login_at: Optional[datetime] = None
-    distinct_ips_7d: int = 0
-    distinct_devices_7d: int = 0
-    login_count_7d: int = 0
-    # True when login activity looks like the same account is being used
-    # by more people/places than one business normally would be.
-    flagged_sharing: bool = False
-
-
-class AdminLoginEventOut(BaseModel):
-    ip_address: Optional[str]
-    user_agent: Optional[str]
-    created_at: datetime
-
-    class Config:
-        from_attributes = True
-
-
-class AdminBusinessDetailOut(AdminBusinessOut):
-    recent_logins: List[AdminLoginEventOut] = []
-
-
-class AdminLicenseAdjustRequest(BaseModel):
-    days: int = 30
-    plan: str = "monthly"
