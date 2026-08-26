@@ -38,6 +38,7 @@ class UserOut(BaseModel):
     name: str
     email: str
     business_name: Optional[str]
+    role: str
     created_at: datetime
 
     class Config:
@@ -277,3 +278,44 @@ class LicenseRenewRequest(BaseModel):
     plan: str = "monthly"
     amount_paid: Optional[float] = None
     mpesa_receipt: Optional[str] = None
+
+
+# ─── Admin (super_admin only) ───────────────────────────────────────────────
+
+class AdminBusinessOut(BaseModel):
+    id: int
+    name: str
+    email: str
+    business_name: Optional[str]
+    is_active: bool
+    created_at: datetime
+    license_status: Optional[str] = None      # ACTIVE / EXPIRED / REVOKED / None (never subscribed)
+    license_plan: Optional[str] = None
+    license_expires_at: Optional[datetime] = None
+    product_count: int = 0
+    sales_count: int = 0
+    last_login_at: Optional[datetime] = None
+    distinct_ips_7d: int = 0
+    distinct_devices_7d: int = 0
+    login_count_7d: int = 0
+    # True when login activity looks like the same account is being used
+    # by more people/places than one business normally would be.
+    flagged_sharing: bool = False
+
+
+class AdminLoginEventOut(BaseModel):
+    ip_address: Optional[str]
+    user_agent: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AdminBusinessDetailOut(AdminBusinessOut):
+    recent_logins: List[AdminLoginEventOut] = []
+
+
+class AdminLicenseAdjustRequest(BaseModel):
+    days: int = 30
+    plan: str = "monthly"

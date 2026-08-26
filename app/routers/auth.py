@@ -11,6 +11,7 @@ from app.schemas.schemas import (
 from app.services.auth import (
     hash_password, verify_password, create_access_token, get_current_user,
     generate_reset_token, hash_reset_token, set_auth_cookie, clear_auth_cookie,
+    log_login_event,
 )
 from app.services.email import send_password_reset_email
 from app.services.license import issue_license, TRIAL_PERIOD_DAYS
@@ -48,10 +49,13 @@ def login(request: Request, response: Response, form_data: OAuth2PasswordRequest
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="This account has been suspended. Contact support.")
     token = create_access_token({"sub": str(user.id)})
     # httpOnly cookie is what the web app actually uses; the token is also
     # returned in the body for API clients and the /docs "Authorize" button.
     set_auth_cookie(response, token)
+    log_login_event(db, user.id, request)
     return {"access_token": token, "token_type": "bearer"}
 
 

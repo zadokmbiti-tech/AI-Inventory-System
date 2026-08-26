@@ -232,7 +232,7 @@ function checkPasswordRequirements() {
 function logout() {
   isAuthenticated = false;
   fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
-  document.getElementById('app').style.display = 'none';
+  document.getElementById('app').classList.add('app-hidden');
   document.getElementById('auth-screen').style.display = 'flex';
 }
 
@@ -242,8 +242,22 @@ async function initApp() {
     currentUser = await apiFetch('/api/auth/me');
     if (!currentUser) return;
     document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
+    document.getElementById('app').classList.remove('app-hidden');
     document.getElementById('sidebar-user').textContent = currentUser.business_name || currentUser.name;
+
+    if (currentUser.role === 'super_admin') {
+      // A super_admin manages every business's account/license — they
+      // don't have their own inventory data or a license, so the normal
+      // dashboard/products/etc. flow (which is license-gated) doesn't
+      // apply to them. Send them straight to the Admin page instead.
+      document.getElementById('admin-nav-link').style.display = '';
+      ['dashboard', 'products', 'sales', 'stock', 'documents', 'alerts', 'forecast', 'subscription']
+        .forEach(p => { const l = document.querySelector(`[data-page="${p}"]`); if (l) l.style.display = 'none'; });
+      await loadAdminBusinesses();
+      showPage('admin');
+      return;
+    }
+
     await loadLicenseStatus();
     await Promise.all([loadProducts(), loadAnalytics(), loadAlerts()]);
     showPage('dashboard');
@@ -897,6 +911,105 @@ async function renewLicense() {
   } catch (e) {
     toast(e.message, 'error');
   }
+}
+
+/* ── Admin (super_admin only) ────────────────────────────────────────────── */
+let adminBusinesses = [];
+
+async function loadAdminBusinesses() {
+  try {
+    adminBusinesses = await apiFetch('/api/admin/businesses') || [];
+    renderAdminBusinesses(adminBusinesses);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+function filterAdminBusinesses() {
+  const q = document.getElementById('admin-search').value.toLowerCase();
+  const filtered = adminBusinesses.filter(b =>
+    (b.business_name || '').toLowerCase().includes(q) ||
+    b.name.toLowerCase().includes(q) ||
+    b.email.toLowerCase().includes(q)
+  );
+  renderAdminBusinesses(filtered);
+}
+
+function renderAdminBusinesses(list) {
+  const tbody = document.getElementById('admin-businesses-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted)">No businesses yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(b => {
+    const licensePill = !b.license_status
+      ? `<span class="pill">None</span>`
+      : b.license_status === 'ACTIVE'
+        ? `<span class="pill pill-ok">${b.license_plan}</span>`
+        : `<span class="pill pill-out">${b.license_status.toLowerCase()}</span>`;
+    const statusPill = b.is_active
+      ? `<span class="pill pill-ok">Active</span>`
+      : `<span class="pill pill-out">Suspended</span>`;
+    const sharingBadge = b.flagged_sharing ? ` <span class="pill pill-low" title="Unusual number of distinct IPs/devices in the last 7 days">Flagged</span>` : '';
+    return `
+      <tr>
+        <td>${b.business_name || '—'}${sharingBadge}</td>
+        <td>${b.name}</td>
+        <td>${b.email}</td>
+        <td>${licensePill}</td>
+        <td>${b.license_expires_at ? new Date(b.license_expires_at).toLocaleDateString() : '—'}</td>
+        <td>${b.product_count}</td>
+        <td>${b.sales_count}</td>
+        <td>${b.login_count_7d}</td>
+        <td>${b.distinct_ips_7d} / ${b.distinct_devices_7d}</td>
+        <td>${statusPill}</td>
+        <td style="white-space:nowrap">
+          ${b.is_active
+            ? `<button class="btn-ghost" onclick="suspendBusiness(${b.id})">Suspend</button>`
+            : `<button class="btn-ghost" onclick="activateBusiness(${b.id})">Activate</button>`}
+          <button class="btn-ghost" onclick="openAdminLicenseModal(${b.id})">License</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+async function suspendBusiness(id) {
+  if (!confirm('Suspend this business? They will be signed out and unable to log back in until reactivated.')) return;
+  try {
+    await apiFetch(`/api/admin/businesses/${id}/suspend`, { method: 'POST' });
+    toast('Business suspended', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function activateBusiness(id) {
+  try {
+    await apiFetch(`/api/admin/businesses/${id}/activate`, { method: 'POST' });
+    toast('Business reactivated', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function openAdminLicenseModal(id) {
+  document.getElementById('admin-license-user-id').value = id;
+  document.getElementById('admin-license-days').value = 30;
+  document.getElementById('admin-license-plan').value = 'monthly';
+  openModal('admin-license-modal');
+}
+
+async function submitAdminLicense() {
+  const id = document.getElementById('admin-license-user-id').value;
+  const days = parseInt(document.getElementById('admin-license-days').value, 10) || 30;
+  const plan = document.getElementById('admin-license-plan').value;
+  try {
+    await apiFetch(`/api/admin/businesses/${id}/license`, {
+      method: 'POST',
+      body: JSON.stringify({ days, plan }),
+    });
+    closeModal('admin-license-modal');
+    toast('License updated', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 /* ── Theme ───────────────────────────────────────────────────────────────── */

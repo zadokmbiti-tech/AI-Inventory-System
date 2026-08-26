@@ -10,7 +10,7 @@ from slowapi.errors import RateLimitExceeded
 from app.database import Base, engine
 from app.config import get_settings
 from app.limiter import limiter
-from app.routers import auth, products, stock_sales, ai_insights, documents, license as license_router
+from app.routers import auth, products, stock_sales, ai_insights, documents, license as license_router, admin
 from app.services.license import require_active_license
 from fastapi import Depends
 
@@ -74,6 +74,7 @@ templates = Jinja2Templates(directory="frontend/templates")
 # Routers
 app.include_router(auth.router)
 app.include_router(license_router.router)  # not license-gated — you must be able to check/renew even when expired
+app.include_router(admin.router)           # not license-gated — super_admin manages licenses, doesn't hold one
 app.include_router(products.router, dependencies=[Depends(require_active_license)])
 app.include_router(stock_sales.router, dependencies=[Depends(require_active_license)])
 app.include_router(ai_insights.router, dependencies=[Depends(require_active_license)])

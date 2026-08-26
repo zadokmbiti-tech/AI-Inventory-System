@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models.models import User
+from app.models.models import User, UserRole, LoginEvent
 from app.config import get_settings
 
 settings = get_settings()
@@ -100,6 +100,42 @@ def get_current_user(
     if not user or not user.is_active:
         raise credentials_exception
     return user
+
+
+def require_super_admin(user: User = Depends(get_current_user)) -> User:
+    """
+    Attach to any admin-only endpoint. 403s any normal business account
+    trying to reach the platform-management API — a business owner having
+    a valid login doesn't mean they can see other businesses' data.
+    """
+    if user.role != UserRole.SUPER_ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return user
+
+
+def log_login_event(db: Session, user_id: int, request: Request) -> None:
+    """
+    Record IP + user-agent for this login. Truncated to column width so a
+    long/garbage header can't fail the insert. Best-effort: a logging
+    failure should never block an actual login.
+
+    Behind a reverse proxy (Vercel, nginx, etc.) `request.client.host` is
+    the proxy's own IP for every request, not the visitor's — that would
+    silently break IP-based sharing detection (every login looks like the
+    same "IP"). Prefer the standard X-Forwarded-For header, which proxies
+    set to the real client IP (first entry in the comma-separated chain).
+    """
+    try:
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            ip = forwarded_for.split(",")[0].strip()
+        else:
+            ip = request.client.host if request.client else None
+        ua = request.headers.get("user-agent", "")[:500]
+        db.add(LoginEvent(user_id=user_id, ip_address=ip, user_agent=ua))
+        db.commit()
+    except Exception:
+        db.rollback()
 
 
 def generate_reset_token() -> tuple[str, str]:
