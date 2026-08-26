@@ -30,7 +30,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
     # Interactive API docs leak your whole schema and give attackers a map
-    # of every endpoint — keep them on for local dev only, off in production
+    # of every endpoint  keep them on for local dev only, off in production
     # (set DEBUG=False) unless you deliberately want a public API reference.
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
@@ -40,7 +40,7 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS: never combine allow_origins=["*"] with allow_credentials=True — the
+# CORS: never combine allow_origins=["*"] with allow_credentials=True  the
 # browser rejects that combination anyway, and the app uses an httpOnly
 # auth cookie, so we need an explicit origin allow-list. Configure extra
 # production origins via the CORS_ORIGINS env var (comma-separated).
@@ -73,8 +73,8 @@ templates = Jinja2Templates(directory="frontend/templates")
 
 # Routers
 app.include_router(auth.router)
-app.include_router(license_router.router)  # not license-gated — you must be able to check/renew even when expired
-app.include_router(admin.router)           # not license-gated — super_admin manages licenses, doesn't hold one
+app.include_router(license_router.router)  # not license-gated  you must be able to check/renew even when expired
+app.include_router(admin.router)           # not license-gated  super_admin manages licenses, doesn't hold one
 app.include_router(products.router, dependencies=[Depends(require_active_license)])
 app.include_router(stock_sales.router, dependencies=[Depends(require_active_license)])
 app.include_router(ai_insights.router, dependencies=[Depends(require_active_license)])

@@ -1,6 +1,6 @@
 """
 License key generation, issuance, and validation for the monthly
-subscription model. This is deliberately payment-gateway-agnostic —
+subscription model. This is deliberately payment-gateway-agnostic 
 `issue_license()` is the single choke point that should be called
 once a payment is confirmed (e.g. from an M-Pesa Daraja STK Push
 callback). Until that's wired in, `POST /api/license/renew` lets an
@@ -46,7 +46,7 @@ def issue_license(
     Create a new license for a user. Any of the user's currently-ACTIVE
     licenses are marked EXPIRED first, so there's only ever one active
     license per business at a time (renewals extend from *now*, not from
-    the old expiry — keeps things simple and matches "pay again to keep
+    the old expiry  keeps things simple and matches "pay again to keep
     using it" rather than stacking unused days).
     """
     now = datetime.now(timezone.utc)
@@ -102,9 +102,9 @@ def require_active_license(
     user: User = Depends(get_current_user),
 ) -> User:
     """
-    FastAPI dependency — attach to any router/endpoint that should be
+    FastAPI dependency  attach to any router/endpoint that should be
     locked behind an active subscription. Raises 402 Payment Required
-    (not 403 — this isn't a permissions issue, it's "please pay/renew").
+    (not 403  this isn't a permissions issue, it's "please pay/renew").
     """
     license_ = get_current_license(db, user.id)
     if not is_license_valid(license_):

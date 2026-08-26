@@ -28,7 +28,7 @@ def _sniff_file_type(contents: bytes) -> Optional[str]:
     Identify a file by its magic bytes instead of trusting the
     client-supplied Content-Type header, which is easy to spoof (e.g.
     naming a script "receipt.pdf" and sending Content-Type: application/pdf).
-    Returns None for HEIC, since its signature check is less standardized —
+    Returns None for HEIC, since its signature check is less standardized 
     those fall back to the declared header.
     """
     if contents.startswith(b"%PDF-"):
@@ -72,7 +72,7 @@ async def upload_document(
         if not contents:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
 
-        # Verify the actual file bytes match a real, allowed file type —
+        # Verify the actual file bytes match a real, allowed file type 
         # don't just trust the Content-Type header the browser sent.
         sniffed = _sniff_file_type(contents)
         if sniffed is not None and sniffed != file.content_type:

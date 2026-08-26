@@ -1,5 +1,5 @@
 /* ── State ──────────────────────────────────────────────────────────────── */
-// No JWT is kept in JS-accessible storage anymore — the server sets it as an
+// No JWT is kept in JS-accessible storage anymore  the server sets it as an
 // httpOnly cookie on login, which the browser attaches automatically to
 // same-origin requests. `isAuthenticated` just tracks UI state.
 let isAuthenticated = false;
@@ -31,7 +31,7 @@ async function apiFetch(path, opts = {}) {
 
 function extractErrorMessage(data) {
   // FastAPI/Pydantic validation errors (422) return `detail` as an array of
-  // {msg, loc, ...} objects rather than a plain string — stringifying that
+  // {msg, loc, ...} objects rather than a plain string  stringifying that
   // array directly (or passing it straight to `new Error()`) produces
   // "[object Object]". Pull out a readable message in both cases.
   const detail = data?.detail;
@@ -155,7 +155,7 @@ async function submitPasswordReset() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(extractErrorMessage(data) || 'Reset failed');
-    showAuthSuccess('Password updated — you can sign in now.');
+    showAuthSuccess('Password updated  you can sign in now.');
     // Clean the token out of the URL and return to the sign-in tab
     window.history.replaceState({}, document.title, window.location.pathname);
     setTimeout(showLoginForm, 1200);
@@ -176,7 +176,7 @@ async function login() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(extractErrorMessage(data) || 'Login failed');
-    // The server already set the httpOnly auth cookie in this response —
+    // The server already set the httpOnly auth cookie in this response 
     // nothing to store client-side.
     isAuthenticated = true;
     await initApp();
@@ -246,7 +246,7 @@ async function initApp() {
     document.getElementById('sidebar-user').textContent = currentUser.business_name || currentUser.name;
 
     if (currentUser.role === 'super_admin') {
-      // A super_admin manages every business's account/license — they
+      // A super_admin manages every business's account/license  they
       // don't have their own inventory data or a license, so the normal
       // dashboard/products/etc. flow (which is license-gated) doesn't
       // apply to them. Send them straight to the Admin page instead.
@@ -296,14 +296,14 @@ function filterProducts() {
 
 function renderProductsTable(products) {
   const tbody = document.getElementById('products-tbody');
-  if (!products.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem">No products yet — add your first one.</td></tr>'; return; }
+  if (!products.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem">No products yet  add your first one.</td></tr>'; return; }
   tbody.innerHTML = products.map(p => {
     const pct = p.reorder_point > 0 ? (p.current_stock / p.reorder_point) : 1;
     const statusClass = p.current_stock === 0 ? 'pill-out' : pct <= 1 ? 'pill-low' : 'pill-ok';
     const statusLabel = p.current_stock === 0 ? 'Out' : pct <= 1 ? 'Low' : 'OK';
     return `<tr>
       <td><strong>${p.name}</strong></td>
-      <td style="color:var(--text-muted)">${p.sku || '—'}</td>
+      <td style="color:var(--text-muted)">${p.sku || ''}</td>
       <td>${p.current_stock} ${p.unit}</td>
       <td>${p.reorder_point} ${p.unit}</td>
       <td>${fmt(p.cost_price)}</td>
@@ -464,7 +464,7 @@ function renderSaleItems() {
       <td>${item.product_name}</td>
       <td>${item.quantity}</td>
       <td>${fmt(item.unit_price)}</td>
-      <td>${item.vat_rate ? fmt(item.vat) + ` (${item.vat_rate}%)` : '—'}</td>
+      <td>${item.vat_rate ? fmt(item.vat) + ` (${item.vat_rate}%)` : ''}</td>
       <td>${fmt(item.subtotal)}</td>
       <td><button class="btn-ghost btn-sm" onclick="removeSaleItem(${i})">✕</button></td>
     </tr>`).join('');
@@ -483,12 +483,12 @@ function renderReceipt(sale) {
     const name = product ? product.name : `Product #${it.product_id}`;
     return `<tr>
       <td>${name}</td><td>${it.quantity}</td><td>${fmt(it.unit_price)}</td>
-      <td>${it.tax_amount ? fmt(it.tax_amount) + ` (${it.tax_rate}%)` : '—'}</td>
+      <td>${it.tax_amount ? fmt(it.tax_amount) + ` (${it.tax_rate}%)` : ''}</td>
       <td>${fmt(it.subtotal + it.tax_amount)}</td>
     </tr>`;
   }).join('');
   box.innerHTML = `
-    <h3 style="margin-bottom:.75rem">Receipt — Sale #${sale.id}</h3>
+    <h3 style="margin-bottom:.75rem">Receipt  Sale #${sale.id}</h3>
     <table class="data-table">
       <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Total</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -560,19 +560,19 @@ async function loadDocuments() {
 function renderDocumentsTable(docs) {
   const tbody = document.getElementById('documents-tbody');
   if (!docs.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">No records yet — add one above.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">No records yet  add one above.</td></tr>';
     return;
   }
   tbody.innerHTML = docs.map(d => {
     const fileCell = d.original_filename
       ? `<a href="#" onclick="viewDocument(${d.id}, ${JSON.stringify(d.original_filename)}); return false;">${d.original_filename}</a>`
-      : '<span style="color:var(--text-muted)">—</span>';
+      : '<span style="color:var(--text-muted)"></span>';
     return `<tr>
       <td><span class="pill pill-ok">${docTypeLabel(d.doc_type)}</span></td>
-      <td>${d.reference_number || '—'}</td>
-      <td>${d.party_name || '—'}</td>
-      <td>${d.amount != null ? fmt(d.amount) : '—'}</td>
-      <td>${d.doc_date ? new Date(d.doc_date).toLocaleDateString() : '—'}</td>
+      <td>${d.reference_number || ''}</td>
+      <td>${d.party_name || ''}</td>
+      <td>${d.amount != null ? fmt(d.amount) : ''}</td>
+      <td>${d.doc_date ? new Date(d.doc_date).toLocaleDateString() : ''}</td>
       <td>${fileCell}</td>
       <td><button class="btn-ghost btn-sm" onclick="deleteDocument(${d.id})">Delete</button></td>
     </tr>`;
@@ -752,13 +752,13 @@ const TIER_LABELS = {
 function renderProductPerformance(data) {
   const wrap = document.getElementById('performance-list');
   if (!data || !data.products || data.products.length === 0) {
-    wrap.innerHTML = '<p style="color:var(--text-muted)">Not enough sales data yet — record some sales to see performance rankings.</p>';
+    wrap.innerHTML = '<p style="color:var(--text-muted)">Not enough sales data yet  record some sales to see performance rankings.</p>';
     return;
   }
 
   wrap.innerHTML = data.products.map(p => {
     const tier = TIER_LABELS[p.tier] || { label: p.tier, color: 'var(--text-muted)' };
-    const trendArrow = p.trend_pct > 0 ? '▲' : (p.trend_pct < 0 ? '▼' : '—');
+    const trendArrow = p.trend_pct > 0 ? '▲' : (p.trend_pct < 0 ? '▼' : '');
     const trendColor = p.trend_pct > 0 ? 'var(--green)' : (p.trend_pct < 0 ? 'var(--red)' : 'var(--text-muted)');
     return `
       <div class="top-product-row" style="align-items:flex-start; flex-direction:column; gap:0.35rem; padding:0.75rem 0;">
@@ -801,7 +801,7 @@ async function loadForecast() {
   `;
 
   document.getElementById('forecast-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? '—'}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? ''}</div></div>
     <div class="kpi-card"><div class="kpi-label">Reorder When Stock Hits</div><div class="kpi-value">${data.suggested_reorder_point}</div></div>
     <div class="kpi-card"><div class="kpi-label">Order This Many At A Time</div><div class="kpi-value">${data.suggested_reorder_quantity}</div></div>
   `;
@@ -867,7 +867,7 @@ async function loadLicenseStatus() {
     const res = await fetch('/api/license/status', { credentials: 'include' });
     const data = await res.json().catch(() => null);
     if (res.status === 404) {
-      box.innerHTML = `<p style="color:var(--text-muted)">No license yet — renew to get started.</p>`;
+      box.innerHTML = `<p style="color:var(--text-muted)">No license yet  renew to get started.</p>`;
       banner.style.display = 'none';
       return;
     }
@@ -953,11 +953,11 @@ function renderAdminBusinesses(list) {
     const sharingBadge = b.flagged_sharing ? ` <span class="pill pill-low" title="Unusual number of distinct IPs/devices in the last 7 days">Flagged</span>` : '';
     return `
       <tr>
-        <td>${b.business_name || '—'}${sharingBadge}</td>
+        <td>${b.business_name || ''}${sharingBadge}</td>
         <td>${b.name}</td>
         <td>${b.email}</td>
         <td>${licensePill}</td>
-        <td>${b.license_expires_at ? new Date(b.license_expires_at).toLocaleDateString() : '—'}</td>
+        <td>${b.license_expires_at ? new Date(b.license_expires_at).toLocaleDateString() : ''}</td>
         <td>${b.product_count}</td>
         <td>${b.sales_count}</td>
         <td>${b.login_count_7d}</td>
@@ -1041,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showResetForm();
     return; // don't auto-login into the app while a reset is pending
   }
-  // No client-readable token to check anymore — just try to load the
+  // No client-readable token to check anymore  just try to load the
   // session; if the httpOnly cookie is missing/expired, apiFetch's 401
   // handling calls logout() and the login screen shows instead.
   initApp();

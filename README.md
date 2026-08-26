@@ -1,27 +1,27 @@
 # SmartStock AI
 
-Inventory intelligence for growing Kenyan SME retailers — stock tracking, sales
+Inventory intelligence for growing Kenyan SME retailers  stock tracking, sales
 recording, VAT-aware invoicing, low-stock alerts, and AI-powered demand
 forecasting, in one lightweight web app.
 
 ## Features
 
-- **Dashboard** — revenue, VAT collected, gross profit, margin, and sales KPIs
+- **Dashboard**  revenue, VAT collected, gross profit, margin, and sales KPIs
   over a selectable period, plus a revenue-by-day chart and top products.
-- **Products** — full CRUD with SKU, cost/selling price, stock unit, reorder
+- **Products**  full CRUD with SKU, cost/selling price, stock unit, reorder
   point/quantity, and Kenya VAT tax category (Standard 16%, Reduced, Zero-rated,
   Exempt).
-- **Record Sale** — build a multi-item sale, auto-calculates VAT and totals,
+- **Record Sale**  build a multi-item sale, auto-calculates VAT and totals,
   supports cash / M-Pesa / credit payment methods, and prints a receipt.
-- **Stock In / Adjustment** — log stock received, adjustments, and
+- **Stock In / Adjustment**  log stock received, adjustments, and
   loss/spoilage against any product.
-- **Records** — store receipts, invoices, and delivery notes with an attached
+- **Records**  store receipts, invoices, and delivery notes with an attached
   PDF/image file per record.
-- **Alerts** — automatic low-stock and out-of-stock alerts with urgency
+- **Alerts**  automatic low-stock and out-of-stock alerts with urgency
   levels.
-- **Forecast** — AI demand forecasting per product (Prophet-based) with a
+- **Forecast**  AI demand forecasting per product (Prophet-based) with a
   predicted-sales-by-week chart and an "Apply AI Reorder Suggestion" action.
-- **Subscription / Licensing** — 30-day license keys with renewal; API access
+- **Subscription / Licensing**  30-day license keys with renewal; API access
   is gated once a license expires.
 - Light/dark theme, mobile-responsive layout with a collapsible sidebar.
 
@@ -78,7 +78,7 @@ This script will:
 3. Install dependencies from `requirements.txt`.
 4. Start the server with `uvicorn main:app --reload` on `http://localhost:8000`.
 
-Edit `.env` with your real values before (or after) the first run — at minimum
+Edit `.env` with your real values before (or after) the first run  at minimum
 `DATABASE_URL` and `SECRET_KEY`.
 
 ### Manual setup
@@ -111,7 +111,7 @@ on an existing database.
 
 ## Usage
 
-Once running, open `http://localhost:8000` in a browser (desktop or mobile —
+Once running, open `http://localhost:8000` in a browser (desktop or mobile 
 the UI is responsive), register a business account, and sign in. Interactive
 API documentation is available at `http://localhost:8000/docs`.
 
@@ -127,7 +127,7 @@ API documentation is available at `http://localhost:8000/docs`.
   (`secure=True`), and an HSTS header is sent. Set `DEBUG=False` before
   deploying publicly.
 - **CORS is locked to an allow-list** built from `FRONTEND_BASE_URL` plus
-  `CORS_ORIGINS` — never re-enable `allow_origins=["*"]`, since the app
+  `CORS_ORIGINS`  never re-enable `allow_origins=["*"]`, since the app
   relies on cookies and a wildcard origin can't be combined with credentials.
 - **Rate limiting** (via `slowapi`) throttles `/api/auth/login` (10/min),
   `/api/auth/register` (5/hour), `/api/auth/forgot-password` (5/hour), and
@@ -136,13 +136,13 @@ API documentation is available at `http://localhost:8000/docs`.
 - **Password rules**: minimum 8 characters, at least one letter and one
   digit, enforced on both registration and password reset.
 - **Document uploads are content-sniffed**, not just trusted by their
-  declared `Content-Type` — the actual file bytes must match a real
+  declared `Content-Type`  the actual file bytes must match a real
   PDF/JPEG/PNG/WEBP signature before the file is accepted.
 - **Security headers** (`X-Content-Type-Options`, `X-Frame-Options`,
   `Referrer-Policy`, `Permissions-Policy`, and `Strict-Transport-Security`
   in production) are set on every response.
 - Rotate `SECRET_KEY` and any other credentials in `.env` before making this
-  repo public or deploying — the current values in your local `.env` should
+  repo public or deploying  the current values in your local `.env` should
   be treated as compromised if they were ever shared or committed.
 
 ## Notes

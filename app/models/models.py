@@ -10,7 +10,7 @@ from app.database import Base
 
 class UserRole(str, enum.Enum):
     OWNER = "owner"                # a business using the product
-    SUPER_ADMIN = "super_admin"    # platform operator — you
+    SUPER_ADMIN = "super_admin"    # platform operator  you
 
 
 class User(Base):
@@ -92,8 +92,8 @@ class License(Base):
 
 class TaxCategory(str, enum.Enum):
     STANDARD = "STANDARD"       # 16% general VAT rate (KRA VAT Act 2013, current as of 2026)
-    REDUCED = "REDUCED"         # e.g. certain petroleum products — rate set per product via tax_rate
-    ZERO_RATED = "ZERO_RATED"   # 0% — exports & Second Schedule items (basic foodstuffs, medical, ag inputs)
+    REDUCED = "REDUCED"         # e.g. certain petroleum products  rate set per product via tax_rate
+    ZERO_RATED = "ZERO_RATED"   # 0%  exports & Second Schedule items (basic foodstuffs, medical, ag inputs)
     EXEMPT = "EXEMPT"           # no VAT charged, no input VAT recovery
 
 
