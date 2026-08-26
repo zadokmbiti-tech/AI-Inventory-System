@@ -12,7 +12,7 @@ class Settings(BaseSettings):
 
     # Password reset
     reset_token_expire_minutes: int = 30
-    frontend_base_url: str = "http://localhost:8000"
+    frontend_base_url: str = "https://ai-inventorysystem.vercel.app"
 
     # Resend (optional  if unset, reset links are logged to console instead of emailed)
     resend_api_key: str = ""
