@@ -17,7 +17,7 @@ END$$;
 ALTER TABLE users
     ADD COLUMN IF NOT EXISTS role userrole NOT NULL DEFAULT 'owner';
 
--- 2. Login event log  one row per successful login, used to flag an
+-- 2. Login event log — one row per successful login, used to flag an
 --    account being used from an unusual number of distinct IPs/devices.
 CREATE TABLE IF NOT EXISTS login_events (
     id SERIAL PRIMARY KEY,
@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS ix_login_events_created_at ON login_events(created_at
 
 COMMIT;
 
--- 3. Promote yourself to super_admin (run this manually  there's no
+-- 3. Promote yourself to super_admin (run this manually — there's no
 --    signup flow for admins on purpose, so no one can register their way
 --    into platform access). Replace the email with your own account:
 --

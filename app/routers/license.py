@@ -4,16 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.models import User, LicenseStatus
-from app.schemas.schemas import LicenseOut, LicenseRenewRequest
+from app.models.models import User, LicenseRequest, LicenseRequestStatus
+from app.schemas.schemas import LicenseOut, LicenseRequestCreate, LicenseRequestOut
 from app.services.auth import get_current_user
-from app.services.email import send_license_key_email
-from app.services.license import (
-    get_current_license,
-    is_license_valid,
-    issue_license,
-    LICENSE_PERIOD_DAYS,
-)
+from app.services.license import get_current_license
 
 router = APIRouter(prefix="/api/license", tags=["Licensing"])
 
@@ -36,32 +30,49 @@ def _to_out(license_) -> LicenseOut:
 
 @router.get("/status", response_model=LicenseOut)
 def license_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Current license for the logged-in business  active, expired, or none yet."""
+    """Current license for the logged-in business — active, expired, or none yet."""
     license_ = get_current_license(db, user.id)
     if not license_:
-        raise HTTPException(status_code=404, detail="No license found. Subscribe to get started.")
+        raise HTTPException(status_code=404, detail="No license yet. Request activation to get started.")
     return _to_out(license_)
 
 
-@router.post("/renew", response_model=LicenseOut, status_code=201)
-def renew_license(
-    payload: LicenseRenewRequest,
+@router.get("/request-status", response_model=LicenseRequestOut)
+def request_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """The business's most recent activation/renewal request, if any."""
+    req = (
+        db.query(LicenseRequest)
+        .filter(LicenseRequest.user_id == user.id)
+        .order_by(LicenseRequest.created_at.desc())
+        .first()
+    )
+    if not req:
+        raise HTTPException(status_code=404, detail="No activation request on file yet.")
+    return req
+
+
+@router.post("/request", response_model=LicenseRequestOut, status_code=201)
+def request_license(
+    payload: LicenseRequestCreate,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    license_ = issue_license(
-        db,
-        user_id=user.id,
-        days=LICENSE_PERIOD_DAYS,
-        plan=payload.plan,
-        amount_paid=payload.amount_paid,
-        mpesa_receipt=payload.mpesa_receipt,
+    """
+    Ask a super_admin to activate or renew this business's license. This
+    does NOT grant access by itself — it only shows up in the Admin panel
+    for a human to review and approve. Only one pending request is kept
+    per business at a time to avoid spamming the queue.
+    """
+    existing = (
+        db.query(LicenseRequest)
+        .filter(LicenseRequest.user_id == user.id, LicenseRequest.status == LicenseRequestStatus.PENDING)
+        .first()
     )
-    try:
-        send_license_key_email(user.email, license_.license_key, license_.expires_at, license_.plan)
-    except Exception as e:
-        # The license is already issued and active at this point  don't let an
-        # email hiccup make it look like the renewal itself failed. The key is
-        # also always visible on the Subscription page regardless of email delivery.
-        print(f"[license-renew] failed to email license key to {user.email}: {e}")
-    return _to_out(license_)
+    if existing:
+        return existing
+
+    req = LicenseRequest(user_id=user.id, plan=payload.plan, message=payload.message)
+    db.add(req)
+    db.commit()
+    db.refresh(req)
+    return req

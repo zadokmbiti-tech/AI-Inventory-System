@@ -23,6 +23,25 @@ ALLOWED_CONTENT_TYPES = {
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
+def _sniff_file_type(contents: bytes) -> Optional[str]:
+    """
+    Identify a file by its magic bytes instead of trusting the
+    client-supplied Content-Type header, which is easy to spoof (e.g.
+    naming a script "receipt.pdf" and sending Content-Type: application/pdf).
+    Returns None for HEIC, since its signature check is less standardized —
+    those fall back to the declared header.
+    """
+    if contents.startswith(b"%PDF-"):
+        return "application/pdf"
+    if contents.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if contents.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if contents[:4] == b"RIFF" and contents[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 @router.post("", response_model=DocumentRecordOut, status_code=201)
 async def upload_document(
     doc_type: DocumentType = Form(...),
@@ -52,6 +71,20 @@ async def upload_document(
             raise HTTPException(status_code=400, detail="File too large (max 10MB)")
         if not contents:
             raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
+        # Verify the actual file bytes match a real, allowed file type —
+        # don't just trust the Content-Type header the browser sent.
+        sniffed = _sniff_file_type(contents)
+        if sniffed is not None and sniffed != file.content_type:
+            raise HTTPException(
+                status_code=400,
+                detail="File contents don't match the declared file type.",
+            )
+        if sniffed is None and file.content_type != "image/heic":
+            raise HTTPException(
+                status_code=400,
+                detail="Unsupported or unrecognized file type. Please upload a PDF, JPG, PNG, or WEBP file.",
+            )
 
         file_path = save_file(contents, file.filename, user.id)
         original_filename = file.filename

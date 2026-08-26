@@ -1,5 +1,8 @@
 /* ── State ──────────────────────────────────────────────────────────────── */
-let token = localStorage.getItem('ss_token') || null;
+// No JWT is kept in JS-accessible storage anymore — the server sets it as an
+// httpOnly cookie on login, which the browser attaches automatically to
+// same-origin requests. `isAuthenticated` just tracks UI state.
+let isAuthenticated = false;
 let currentUser = null;
 let allProducts = [];
 let saleItems = [];
@@ -13,16 +16,34 @@ const API = '';   // same origin
 /* ── Helpers ────────────────────────────────────────────────────────────── */
 async function apiFetch(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(API + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) } });
+  // credentials: 'include' sends the httpOnly auth cookie along with the
+  // request; no Authorization header needed (and none is readable by JS).
+  const res = await fetch(API + path, { ...opts, credentials: 'include', headers: { ...headers, ...(opts.headers || {}) } });
   if (res.status === 401) { logout(); return null; }
   const data = await res.json().catch(() => null);
   if (res.status === 402) {
     document.getElementById('license-banner').style.display = 'block';
-    throw new Error(data?.detail || 'Your license has expired. Please renew.');
+    throw new Error(extractErrorMessage(data) || 'Your license has expired. Please renew.');
   }
-  if (!res.ok) throw new Error(data?.detail || 'Request failed');
+  if (!res.ok) throw new Error(extractErrorMessage(data) || 'Request failed');
   return data;
+}
+
+function extractErrorMessage(data) {
+  // FastAPI/Pydantic validation errors (422) return `detail` as an array of
+  // {msg, loc, ...} objects rather than a plain string — stringifying that
+  // array directly (or passing it straight to `new Error()`) produces
+  // "[object Object]". Pull out a readable message in both cases.
+  const detail = data?.detail;
+  if (!detail) return null;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    return detail
+      .map(d => (typeof d === 'string' ? d : d?.msg))
+      .filter(Boolean)
+      .join('; ') || 'Invalid input';
+  }
+  return 'Invalid input';
 }
 
 function toast(msg, type = 'info') {
@@ -37,6 +58,16 @@ function fmt(n) { return 'KES ' + Number(n).toLocaleString('en-KE', { minimumFra
 
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+/* ── Mobile sidebar ─────────────────────────────────────────────────────── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
 
 /* ── Auth ────────────────────────────────────────────────────────────────── */
 function switchTab(tab) {
@@ -101,7 +132,7 @@ async function requestPasswordReset() {
       body: JSON.stringify({ email })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Something went wrong');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Something went wrong');
     showAuthSuccess(data.message || 'If that email is registered, a reset link has been sent.');
   } catch (e) {
     showAuthError(e.message);
@@ -123,8 +154,8 @@ async function submitPasswordReset() {
       body: JSON.stringify({ token: resetToken, new_password: pass })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Reset failed');
-    showAuthSuccess('Password updated  you can sign in now.');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Reset failed');
+    showAuthSuccess('Password updated — you can sign in now.');
     // Clean the token out of the URL and return to the sign-in tab
     window.history.replaceState({}, document.title, window.location.pathname);
     setTimeout(showLoginForm, 1200);
@@ -140,12 +171,14 @@ async function login() {
     const form = new URLSearchParams({ username: email, password: pass });
     const res = await fetch('/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
       body: form.toString()
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Login failed');
-    token = data.access_token;
-    localStorage.setItem('ss_token', token);
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Login failed');
+    // The server already set the httpOnly auth cookie in this response —
+    // nothing to store client-side.
+    isAuthenticated = true;
     await initApp();
   } catch (e) {
     const el = document.getElementById('auth-error');
@@ -154,13 +187,20 @@ async function login() {
 }
 
 async function register() {
+  const password = document.getElementById('reg-password').value;
+  const reqs = checkPasswordRequirements();
+  if (!reqs.length || !reqs.letter || !reqs.digit) {
+    const el = document.getElementById('auth-error');
+    el.textContent = 'Please meet all password requirements.'; el.style.display = 'block';
+    return;
+  }
   try {
     await apiFetch('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         name: document.getElementById('reg-name').value,
         email: document.getElementById('reg-email').value,
-        password: document.getElementById('reg-password').value,
+        password,
         business_name: document.getElementById('reg-business').value,
       })
     });
@@ -172,9 +212,27 @@ async function register() {
   }
 }
 
+/* ── Password requirements checklist ───────────────────────────────────────
+   Mirrors the backend rule in app/schemas/schemas.py
+   (_validate_password_strength): >=8 chars, at least one letter, at least
+   one digit. Keep both in sync if the rule ever changes. */
+function checkPasswordRequirements() {
+  const password = document.getElementById('reg-password').value;
+  const reqs = {
+    length: password.length >= 8,
+    letter: /[a-zA-Z]/.test(password),
+    digit: /[0-9]/.test(password),
+  };
+  document.getElementById('req-length').classList.toggle('met', reqs.length);
+  document.getElementById('req-letter').classList.toggle('met', reqs.letter);
+  document.getElementById('req-digit').classList.toggle('met', reqs.digit);
+  return reqs;
+}
+
 function logout() {
-  token = null; localStorage.removeItem('ss_token');
-  document.getElementById('app').style.display = 'none';
+  isAuthenticated = false;
+  fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
+  document.getElementById('app').classList.add('app-hidden');
   document.getElementById('auth-screen').style.display = 'flex';
 }
 
@@ -184,8 +242,22 @@ async function initApp() {
     currentUser = await apiFetch('/api/auth/me');
     if (!currentUser) return;
     document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'flex';
+    document.getElementById('app').classList.remove('app-hidden');
     document.getElementById('sidebar-user').textContent = currentUser.business_name || currentUser.name;
+
+    if (currentUser.role === 'super_admin') {
+      // A super_admin manages every business's account/license — they
+      // don't have their own inventory data or a license, so the normal
+      // dashboard/products/etc. flow (which is license-gated) doesn't
+      // apply to them. Send them straight to the Admin page instead.
+      document.getElementById('admin-nav-link').style.display = '';
+      ['dashboard', 'products', 'sales', 'stock', 'documents', 'alerts', 'forecast', 'subscription']
+        .forEach(p => { const l = document.querySelector(`[data-page="${p}"]`); if (l) l.style.display = 'none'; });
+      await loadAdminBusinesses();
+      showPage('admin');
+      return;
+    }
+
     await loadLicenseStatus();
     await Promise.all([loadProducts(), loadAnalytics(), loadAlerts()]);
     showPage('dashboard');
@@ -194,6 +266,7 @@ async function initApp() {
 
 /* ── Navigation ──────────────────────────────────────────────────────────── */
 function showPage(name) {
+  closeSidebar();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
@@ -223,14 +296,14 @@ function filterProducts() {
 
 function renderProductsTable(products) {
   const tbody = document.getElementById('products-tbody');
-  if (!products.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem">No products yet  add your first one.</td></tr>'; return; }
+  if (!products.length) { tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem">No products yet — add your first one.</td></tr>'; return; }
   tbody.innerHTML = products.map(p => {
     const pct = p.reorder_point > 0 ? (p.current_stock / p.reorder_point) : 1;
     const statusClass = p.current_stock === 0 ? 'pill-out' : pct <= 1 ? 'pill-low' : 'pill-ok';
     const statusLabel = p.current_stock === 0 ? 'Out' : pct <= 1 ? 'Low' : 'OK';
     return `<tr>
       <td><strong>${p.name}</strong></td>
-      <td style="color:var(--text-muted)">${p.sku || ''}</td>
+      <td style="color:var(--text-muted)">${p.sku || '—'}</td>
       <td>${p.current_stock} ${p.unit}</td>
       <td>${p.reorder_point} ${p.unit}</td>
       <td>${fmt(p.cost_price)}</td>
@@ -391,7 +464,7 @@ function renderSaleItems() {
       <td>${item.product_name}</td>
       <td>${item.quantity}</td>
       <td>${fmt(item.unit_price)}</td>
-      <td>${item.vat_rate ? fmt(item.vat) + ` (${item.vat_rate}%)` : ''}</td>
+      <td>${item.vat_rate ? fmt(item.vat) + ` (${item.vat_rate}%)` : '—'}</td>
       <td>${fmt(item.subtotal)}</td>
       <td><button class="btn-ghost btn-sm" onclick="removeSaleItem(${i})">✕</button></td>
     </tr>`).join('');
@@ -410,12 +483,12 @@ function renderReceipt(sale) {
     const name = product ? product.name : `Product #${it.product_id}`;
     return `<tr>
       <td>${name}</td><td>${it.quantity}</td><td>${fmt(it.unit_price)}</td>
-      <td>${it.tax_amount ? fmt(it.tax_amount) + ` (${it.tax_rate}%)` : ''}</td>
+      <td>${it.tax_amount ? fmt(it.tax_amount) + ` (${it.tax_rate}%)` : '—'}</td>
       <td>${fmt(it.subtotal + it.tax_amount)}</td>
     </tr>`;
   }).join('');
   box.innerHTML = `
-    <h3 style="margin-bottom:.75rem">Receipt  Sale #${sale.id}</h3>
+    <h3 style="margin-bottom:.75rem">Receipt — Sale #${sale.id}</h3>
     <table class="data-table">
       <thead><tr><th>Product</th><th>Qty</th><th>Price</th><th>VAT</th><th>Total</th></tr></thead>
       <tbody>${rows}</tbody>
@@ -487,19 +560,19 @@ async function loadDocuments() {
 function renderDocumentsTable(docs) {
   const tbody = document.getElementById('documents-tbody');
   if (!docs.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">No records yet  add one above.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem">No records yet — add one above.</td></tr>';
     return;
   }
   tbody.innerHTML = docs.map(d => {
     const fileCell = d.original_filename
       ? `<a href="#" onclick="viewDocument(${d.id}, ${JSON.stringify(d.original_filename)}); return false;">${d.original_filename}</a>`
-      : '<span style="color:var(--text-muted)"></span>';
+      : '<span style="color:var(--text-muted)">—</span>';
     return `<tr>
       <td><span class="pill pill-ok">${docTypeLabel(d.doc_type)}</span></td>
-      <td>${d.reference_number || ''}</td>
-      <td>${d.party_name || ''}</td>
-      <td>${d.amount != null ? fmt(d.amount) : ''}</td>
-      <td>${d.doc_date ? new Date(d.doc_date).toLocaleDateString() : ''}</td>
+      <td>${d.reference_number || '—'}</td>
+      <td>${d.party_name || '—'}</td>
+      <td>${d.amount != null ? fmt(d.amount) : '—'}</td>
+      <td>${d.doc_date ? new Date(d.doc_date).toLocaleDateString() : '—'}</td>
       <td>${fileCell}</td>
       <td><button class="btn-ghost btn-sm" onclick="deleteDocument(${d.id})">Delete</button></td>
     </tr>`;
@@ -529,11 +602,11 @@ async function submitDocument() {
   try {
     const res = await fetch('/api/documents', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
+      credentials: 'include',
       body: formData
     });
     const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(data?.detail || 'Could not save record');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Could not save record');
 
     ['doc-ref', 'doc-party', 'doc-amount', 'doc-date', 'doc-notes'].forEach(id => document.getElementById(id).value = '');
     fileInput.value = '';
@@ -547,7 +620,7 @@ async function submitDocument() {
 
 async function viewDocument(id, filename) {
   try {
-    const res = await fetch(`/api/documents/${id}/file`, { headers: { 'Authorization': `Bearer ${token}` } });
+    const res = await fetch(`/api/documents/${id}/file`, { credentials: 'include' });
     if (!res.ok) throw new Error('Could not open file');
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
@@ -567,11 +640,11 @@ async function deleteDocument(id) {
   try {
     const res = await fetch(`/api/documents/${id}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` }
+      credentials: 'include'
     });
     if (!res.ok && res.status !== 204) {
       const data = await res.json().catch(() => null);
-      throw new Error(data?.detail || 'Could not delete record');
+      throw new Error(extractErrorMessage(data) || 'Could not delete record');
     }
     toast('Record deleted', 'ok');
     await loadDocuments();
@@ -679,13 +752,13 @@ const TIER_LABELS = {
 function renderProductPerformance(data) {
   const wrap = document.getElementById('performance-list');
   if (!data || !data.products || data.products.length === 0) {
-    wrap.innerHTML = '<p style="color:var(--text-muted)">Not enough sales data yet  record some sales to see performance rankings.</p>';
+    wrap.innerHTML = '<p style="color:var(--text-muted)">Not enough sales data yet — record some sales to see performance rankings.</p>';
     return;
   }
 
   wrap.innerHTML = data.products.map(p => {
     const tier = TIER_LABELS[p.tier] || { label: p.tier, color: 'var(--text-muted)' };
-    const trendArrow = p.trend_pct > 0 ? '▲' : (p.trend_pct < 0 ? '▼' : '');
+    const trendArrow = p.trend_pct > 0 ? '▲' : (p.trend_pct < 0 ? '▼' : '—');
     const trendColor = p.trend_pct > 0 ? 'var(--green)' : (p.trend_pct < 0 ? 'var(--red)' : 'var(--text-muted)');
     return `
       <div class="top-product-row" style="align-items:flex-start; flex-direction:column; gap:0.35rem; padding:0.75rem 0;">
@@ -728,7 +801,7 @@ async function loadForecast() {
   `;
 
   document.getElementById('forecast-kpis').innerHTML = `
-    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? ''}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Est. Sales / Day</div><div class="kpi-value">${s.avg_daily_demand ?? '—'}</div></div>
     <div class="kpi-card"><div class="kpi-label">Reorder When Stock Hits</div><div class="kpi-value">${data.suggested_reorder_point}</div></div>
     <div class="kpi-card"><div class="kpi-label">Order This Many At A Time</div><div class="kpi-value">${data.suggested_reorder_quantity}</div></div>
   `;
@@ -790,15 +863,26 @@ async function applyReorderSuggestion() {
 async function loadLicenseStatus() {
   const box = document.getElementById('license-status-box');
   const banner = document.getElementById('license-banner');
+  const requestForm = document.getElementById('license-request-form');
   try {
-    const res = await fetch('/api/license/status', { headers: { 'Authorization': `Bearer ${token}` } });
+    const res = await fetch('/api/license/status', { credentials: 'include' });
     const data = await res.json().catch(() => null);
+
     if (res.status === 404) {
-      box.innerHTML = `<p style="color:var(--text-muted)">No license yet  renew to get started.</p>`;
+      // No license yet — show whether a request is already pending so the
+      // business isn't left wondering if their click registered.
       banner.style.display = 'none';
+      const pending = await checkPendingRequest();
+      if (pending) {
+        box.innerHTML = `<p style="color:var(--text-muted)">Your activation request is pending review. We'll notify you once approved.</p>`;
+        requestForm.style.display = 'none';
+      } else {
+        box.innerHTML = `<p style="color:var(--text-muted)">Your account hasn't been activated yet. Send payment, then request activation below.</p>`;
+        requestForm.style.display = 'block';
+      }
       return;
     }
-    if (!res.ok) throw new Error(data?.detail || 'Could not load license status');
+    if (!res.ok) throw new Error(extractErrorMessage(data) || 'Could not load license status');
 
     const expired = data.status !== 'ACTIVE' || data.days_remaining <= 0;
     banner.style.display = expired ? 'block' : 'none';
@@ -814,29 +898,188 @@ async function loadLicenseStatus() {
       <div class="form-group"><label>Days Remaining</label><div>${data.days_remaining}</div></div>
       <div class="form-group"><label>Expires</label><div>${new Date(data.expires_at).toLocaleString()}</div></div>
     `;
+
+    if (expired) {
+      const pending = await checkPendingRequest();
+      requestForm.style.display = pending ? 'none' : 'block';
+      if (pending) box.innerHTML += `<p style="color:var(--text-muted);margin-top:.5rem">Renewal request pending review.</p>`;
+    } else {
+      requestForm.style.display = 'none';
+    }
   } catch (e) {
     box.innerHTML = `<p style="color:var(--red)">${e.message}</p>`;
   }
 }
 
-async function renewLicense() {
+async function checkPendingRequest() {
   try {
-    const res = await fetch('/api/license/renew', {
+    const res = await fetch('/api/license/request-status', { credentials: 'include' });
+    if (res.status === 404) return false;
+    const data = await res.json();
+    return data.status === 'PENDING';
+  } catch {
+    return false;
+  }
+}
+
+async function requestLicense() {
+  try {
+    const message = document.getElementById('license-request-message').value;
+    await apiFetch('/api/license/request', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ plan: 'monthly' }),
+      body: JSON.stringify({ plan: 'monthly', message: message || null }),
     });
-    const data = await res.json().catch(() => null);
-    if (!res.ok) throw new Error(data?.detail || 'Renewal failed');
-    const msg = document.getElementById('license-success');
-    msg.textContent = `✓ Renewed! New key: ${data.license_key} (also emailed to you)`;
-    msg.style.display = 'block';
-    setTimeout(() => msg.style.display = 'none', 6000);
-    toast('License renewed', 'ok');
+    toast('Activation requested — we\'ll review it shortly', 'ok');
     await loadLicenseStatus();
   } catch (e) {
     toast(e.message, 'error');
   }
+}
+
+/* ── Admin (super_admin only) ────────────────────────────────────────────── */
+let adminBusinesses = [];
+
+async function loadAdminBusinesses() {
+  await loadAdminLicenseRequests();
+  try {
+    adminBusinesses = await apiFetch('/api/admin/businesses') || [];
+    renderAdminBusinesses(adminBusinesses);
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function loadAdminLicenseRequests() {
+  const tbody = document.getElementById('admin-requests-tbody');
+  try {
+    const requests = await apiFetch('/api/admin/license-requests?status=PENDING') || [];
+    if (!requests.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted)">No pending requests</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = requests.map(r => `
+      <tr>
+        <td>${r.business_name || '—'}</td>
+        <td>${r.owner_name}</td>
+        <td>${r.email}</td>
+        <td>${r.plan}</td>
+        <td>${r.message || '—'}</td>
+        <td>${new Date(r.created_at).toLocaleString()}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-primary" onclick="approveLicenseRequest(${r.id})">Approve</button>
+          <button class="btn-ghost" onclick="dismissLicenseRequest(${r.id})">Dismiss</button>
+        </td>
+      </tr>`).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red)">${e.message}</td></tr>`;
+  }
+}
+
+async function approveLicenseRequest(id) {
+  try {
+    await apiFetch(`/api/admin/license-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ days: 30, plan: 'monthly' }),
+    });
+    toast('Business activated', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function dismissLicenseRequest(id) {
+  if (!confirm('Dismiss this request without activating the business?')) return;
+  try {
+    await apiFetch(`/api/admin/license-requests/${id}/dismiss`, { method: 'POST' });
+    toast('Request dismissed', 'ok');
+    await loadAdminLicenseRequests();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function filterAdminBusinesses() {
+  const q = document.getElementById('admin-search').value.toLowerCase();
+  const filtered = adminBusinesses.filter(b =>
+    (b.business_name || '').toLowerCase().includes(q) ||
+    b.name.toLowerCase().includes(q) ||
+    b.email.toLowerCase().includes(q)
+  );
+  renderAdminBusinesses(filtered);
+}
+
+function renderAdminBusinesses(list) {
+  const tbody = document.getElementById('admin-businesses-tbody');
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted)">No businesses yet</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(b => {
+    const licensePill = !b.license_status
+      ? `<span class="pill">None</span>`
+      : b.license_status === 'ACTIVE'
+        ? `<span class="pill pill-ok">${b.license_plan}</span>`
+        : `<span class="pill pill-out">${b.license_status.toLowerCase()}</span>`;
+    const statusPill = b.is_active
+      ? `<span class="pill pill-ok">Active</span>`
+      : `<span class="pill pill-out">Suspended</span>`;
+    const sharingBadge = b.flagged_sharing ? ` <span class="pill pill-low" title="Unusual number of distinct IPs/devices in the last 7 days">Flagged</span>` : '';
+    return `
+      <tr>
+        <td>${b.business_name || '—'}${sharingBadge}</td>
+        <td>${b.name}</td>
+        <td>${b.email}</td>
+        <td>${licensePill}</td>
+        <td>${b.license_expires_at ? new Date(b.license_expires_at).toLocaleDateString() : '—'}</td>
+        <td>${b.product_count}</td>
+        <td>${b.sales_count}</td>
+        <td>${b.login_count_7d}</td>
+        <td>${b.distinct_ips_7d} / ${b.distinct_devices_7d}</td>
+        <td>${statusPill}</td>
+        <td style="white-space:nowrap">
+          ${b.is_active
+            ? `<button class="btn-ghost" onclick="suspendBusiness(${b.id})">Suspend</button>`
+            : `<button class="btn-ghost" onclick="activateBusiness(${b.id})">Activate</button>`}
+          <button class="btn-ghost" onclick="openAdminLicenseModal(${b.id})">License</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+async function suspendBusiness(id) {
+  if (!confirm('Suspend this business? They will be signed out and unable to log back in until reactivated.')) return;
+  try {
+    await apiFetch(`/api/admin/businesses/${id}/suspend`, { method: 'POST' });
+    toast('Business suspended', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+async function activateBusiness(id) {
+  try {
+    await apiFetch(`/api/admin/businesses/${id}/activate`, { method: 'POST' });
+    toast('Business reactivated', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function openAdminLicenseModal(id) {
+  document.getElementById('admin-license-user-id').value = id;
+  document.getElementById('admin-license-days').value = 30;
+  document.getElementById('admin-license-plan').value = 'monthly';
+  openModal('admin-license-modal');
+}
+
+async function submitAdminLicense() {
+  const id = document.getElementById('admin-license-user-id').value;
+  const days = parseInt(document.getElementById('admin-license-days').value, 10) || 30;
+  const plan = document.getElementById('admin-license-plan').value;
+  try {
+    await apiFetch(`/api/admin/businesses/${id}/license`, {
+      method: 'POST',
+      body: JSON.stringify({ days, plan }),
+    });
+    closeModal('admin-license-modal');
+    toast('License updated', 'ok');
+    await loadAdminBusinesses();
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 /* ── Theme ───────────────────────────────────────────────────────────────── */
@@ -868,5 +1111,8 @@ document.addEventListener('DOMContentLoaded', () => {
     showResetForm();
     return; // don't auto-login into the app while a reset is pending
   }
-  if (token) initApp();
+  // No client-readable token to check anymore — just try to load the
+  // session; if the httpOnly cookie is missing/expired, apiFetch's 401
+  // handling calls logout() and the login screen shows instead.
+  initApp();
 });

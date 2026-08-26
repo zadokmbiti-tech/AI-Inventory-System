@@ -80,8 +80,34 @@ input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
 }
 .auth-box input:focus { outline: none; border-color: var(--accent); }
 
+/* ── Password requirements checklist ────────────────────────────────────── */
+.password-requirements {
+  list-style: none; margin: -0.35rem 0 0.9rem; padding: 0;
+  display: flex; flex-direction: column; gap: 0.3rem;
+}
+.password-requirements li {
+  display: flex; align-items: center; gap: 0.45rem;
+  font-size: 0.78rem; color: var(--text-muted);
+  transition: color .15s;
+}
+.password-requirements .req-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 15px; border-radius: 50%;
+  border: 1px solid var(--border); color: transparent;
+  font-size: 0.65rem; flex-shrink: 0; transition: all .15s;
+}
+.password-requirements li.met { color: var(--green, #2dce89); }
+.password-requirements li.met .req-icon {
+  background: var(--green, #2dce89); border-color: var(--green, #2dce89);
+  color: #0b1710;
+}
+
 /* ── App Shell ────────────────────────────────────────────────────────── */
 #app { display: flex; height: 100vh; overflow: hidden; }
+/* Toggled from JS instead of an inline style, so this always wins the
+   show/hide decision while still letting the media query below control
+   *how* #app displays (flex on desktop, block on mobile) once visible. */
+.app-hidden { display: none !important; }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────── */
 .sidebar {
@@ -282,3 +308,101 @@ input:focus, select:focus { outline: none; border-color: var(--accent); }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── Table scroll (mobile-safe tables) ──────────────────────────────────── */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+#products-table-wrap, #documents-table-wrap { overflow-x: auto; }
+
+/* ── Mobile top bar & hamburger (hidden on desktop) ─────────────────────── */
+.mobile-topbar { display: none; }
+.hamburger-btn {
+  display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  width: 34px; height: 34px; background: transparent; border: none; cursor: pointer;
+  padding: 0;
+}
+.hamburger-btn span { display: block; width: 100%; height: 2px; background: var(--text); border-radius: 2px; }
+.sidebar-close-btn {
+  display: none; margin-left: auto; background: transparent; border: none;
+  color: var(--text-muted); font-size: 1.1rem; cursor: pointer;
+}
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 199;
+}
+
+/* ── Responsive breakpoints ──────────────────────────────────────────────
+   Tablet / small desktop: tighten spacing, 2-col KPIs, stacked charts.
+   Phone: off-canvas sidebar, single-column forms, scrollable tables.
+   ────────────────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .charts-row { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  body { overflow: auto; height: auto; min-height: 100vh; }
+  #app { display: block; height: auto; min-height: 100vh; }
+
+  /* Mobile top bar replaces the inline sidebar brand */
+  .mobile-topbar {
+    display: flex; align-items: center; gap: 0.75rem;
+    position: sticky; top: 0; left: 0; z-index: 150;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0; /* flush edges — the hamburger sits right in the top-left corner */
+  }
+  .hamburger-btn {
+    width: 48px; height: 48px; /* bigger tap target now that it owns the corner */
+    padding: 0 0 0 0.6rem;
+  }
+  .mobile-topbar-brand {
+    font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.75rem 1rem 0.75rem 0;
+  }
+
+  /* Sidebar becomes an off-canvas drawer */
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 200;
+    width: 78vw; max-width: 300px;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    box-shadow: 2px 0 24px rgba(0,0,0,.35);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .sidebar-close-btn { display: block; }
+
+  .main-content { padding: 1.1rem 1rem 2rem; }
+  .page-header { flex-wrap: wrap; gap: 0.75rem; }
+
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .kpi-card { padding: 0.9rem 1rem; }
+  .kpi-value { font-size: 1.3rem; }
+
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+  .form-card { max-width: 100%; padding: 1.1rem; }
+
+  .filter-row { flex-wrap: wrap; align-items: stretch; }
+  .filter-row input { max-width: 100%; width: 100%; }
+
+  .sale-add-row { flex-wrap: wrap; }
+  .sale-add-row select, .sale-add-row input, .sale-add-row button { flex: 1 1 100%; }
+  .sale-total-row { flex-direction: column; align-items: stretch; text-align: right; }
+  .sale-total-row select, .sale-total-row button { width: 100%; }
+
+  .forecast-controls { flex-wrap: wrap; }
+  .forecast-controls select, .forecast-controls button { flex: 1 1 100%; min-width: 0; }
+
+  .data-table th, .data-table td { padding: 0.55rem 0.6rem; font-size: 0.82rem; white-space: nowrap; }
+
+  .auth-box { width: 92vw; padding: 1.75rem 1.4rem; }
+
+  .modal-box { width: 95vw; }
+  .modal-body { max-height: 75vh; }
+
+  .toast { left: 1rem; right: 1rem; bottom: 1rem; text-align: center; }
+}
+
+@media (max-width: 420px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .brand h1 { font-size: 1.25rem; }
+}
