@@ -36,7 +36,7 @@ def _to_out(license_) -> LicenseOut:
 
 @router.get("/status", response_model=LicenseOut)
 def license_status(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    """Current license for the logged-in business — active, expired, or none yet."""
+    """Current license for the logged-in business  active, expired, or none yet."""
     license_ = get_current_license(db, user.id)
     if not license_:
         raise HTTPException(status_code=404, detail="No license found. Subscribe to get started.")
@@ -49,16 +49,6 @@ def renew_license(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """
-    Issue a fresh 30-day license for the logged-in business.
-
-    NOTE: this is a placeholder self-service endpoint. In production this
-    should only be called from your M-Pesa Daraja STK Push callback once
-    payment is CONFIRMED — not directly from the frontend "Pay" button —
-    otherwise anyone could renew for free. Wire the callback handler to
-    call `issue_license()` from app/services/license.py the same way this
-    endpoint does, passing the real mpesa_receipt.
-    """
     license_ = issue_license(
         db,
         user_id=user.id,
@@ -70,7 +60,7 @@ def renew_license(
     try:
         send_license_key_email(user.email, license_.license_key, license_.expires_at, license_.plan)
     except Exception as e:
-        # The license is already issued and active at this point — don't let an
+        # The license is already issued and active at this point  don't let an
         # email hiccup make it look like the renewal itself failed. The key is
         # also always visible on the Subscription page regardless of email delivery.
         print(f"[license-renew] failed to email license key to {user.email}: {e}")

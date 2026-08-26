@@ -72,7 +72,7 @@ class ProductCreate(BaseModel):
     reorder_quantity: float = 0
     category_id: Optional[int] = None
     tax_category: TaxCategory = TaxCategory.STANDARD
-    tax_rate: float = 16.0  # % — default is Kenya's standard VAT rate; override for REDUCED items etc.
+    tax_rate: float = 16.0  # %  default is Kenya's standard VAT rate; override for REDUCED items etc.
 
 
 class ProductUpdate(BaseModel):
@@ -177,7 +177,7 @@ class SaleOut(BaseModel):
 class VatSummary(BaseModel):
     period_days: int
     net_sales: float           # total sales excluding VAT
-    output_vat_collected: float  # VAT charged to customers — what you owe KRA before input VAT credits
+    output_vat_collected: float  # VAT charged to customers  what you owe KRA before input VAT credits
     gross_sales: float          # net_sales + output_vat_collected
     by_tax_category: List[dict]  # breakdown: category, net_sales, vat_amount, count
     disclaimer: str
