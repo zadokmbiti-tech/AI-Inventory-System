@@ -17,7 +17,6 @@ class Settings(BaseSettings):
     # Resend (optional — if unset, reset links are logged to console instead of emailed)
     resend_api_key: str = ""
     email_from: str = "SmartStock AI <onboarding@resend.dev>"
-
     # Fallback: while your Resend sender is unverified (sandbox mode), it can only
     # deliver to this address. When a reset email to someone else fails, we forward
     # the request here instead so you can help them manually.
